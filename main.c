@@ -3,13 +3,9 @@
 #include <stdbool.h>
 #include <SDL/SDL.h>
 
+#include "config.h"
 #include "debug.h"
 #include "fractal.h"
-
-#define NAME "fractal"
-#define WIDTH  800
-#define HEIGHT 600
-#define BPP    32
 
 int main(int argc, char* argv[])
 {
