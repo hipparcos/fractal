@@ -1,0 +1,7 @@
+                             fractal
+                A simple fractal drawer using SDL
+
+                     (c) Adrien Aucher 2011
+              MIT license (see LICENSE for details)
+
+fractal is a simple SDL application that displays a Mandelbrot set.
