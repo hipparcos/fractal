@@ -4,6 +4,7 @@
 #include <SDL/SDL.h>
 
 #include "debug.h"
+#include "fractal.h"
 
 #define NAME "fractal"
 #define WIDTH  800
@@ -17,7 +18,8 @@ int main(int argc, char* argv[])
   
   SDL_Init(SDL_INIT_VIDEO);
   SDL_WM_SetCaption(NAME, NULL);
-  SDL_Surface* window = SDL_SetVideoMode(WIDTH, HEIGHT, BPP, SDL_HWSURFACE);
+
+  struct fractal* f = fractal_create(WIDTH, HEIGHT, BPP);
 
   debug_separator();
 
@@ -52,17 +54,15 @@ int main(int argc, char* argv[])
       default: break;
     }
 
-    /* Clear display */
-    SDL_FillRect(window, NULL, SDL_MapRGB(window->format, 0, 0, 0));
-
     /* Display */
-    SDL_Flip(window);
+    fractal_display(f);
   }
 
   debug_separator();
   debug("Quit...");
 
-  SDL_FreeSurface(window);
+  fractal_destroy(f);
+
   SDL_Quit();
 
   debug("Goodbye :)");
