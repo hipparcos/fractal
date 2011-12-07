@@ -1,6 +1,6 @@
 EXE=fractal
-SOURCES=main.c
-DEBUG=-O3
+SOURCES=main.c debug.c
+DEBUG=-O3 -DDEBUG
 LIBS=-lSDL
 
 CFLAGS=-Wall -c -std=c99 $(DEBUG)
