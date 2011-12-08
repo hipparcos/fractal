@@ -1,5 +1,5 @@
 EXE=fractal
-SOURCES=main.c debug.c fractal.c mandelbrot.c
+SOURCES=main.c debug.c fractal.c mandelbrot.c event.c
 DEBUG=-O3 -DDEBUG
 LIBS=-lSDL -lm
 
