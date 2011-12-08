@@ -5,3 +5,15 @@
               MIT license (see LICENSE for details)
 
 fractal is a simple SDL application that displays a Mandelbrot set.
+
+Commands:
+---------
+escape        quit
+u             update display
+r             reset display
+arrows        move
++             max iterations per pixel + 10 (depth)
+-             max iterations per pixel - 10 (depth)
+CTRL+`+`      zoom+ x2
+CTRL+`-`      zoom- x2
+click + drag  zoom (box)
