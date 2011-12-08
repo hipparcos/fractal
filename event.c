@@ -73,8 +73,13 @@ void event_loop(struct fractal* f)
             }
             else
             {
-              fractal_set_imax(f, fractal_get_imax(f) + 10);
-              debug("Event: increase imax by 10 to %d.", fractal_get_imax(f));
+              if(fractal_get_imax(f) < 240)
+              {
+                fractal_set_imax(f, fractal_get_imax(f) + 10);
+                debug("Event: increase imax by 10 to %d.", fractal_get_imax(f));
+              }
+              else
+                update = false;
             }
             break;
           case SDLK_KP_MINUS:
@@ -86,8 +91,13 @@ void event_loop(struct fractal* f)
             }
             else
             {
-              fractal_set_imax(f, fractal_get_imax(f) - 10);
-              debug("Event: decrease imax by 10 to %d.", fractal_get_imax(f));
+              if(fractal_get_imax(f) > 10)
+              {
+                fractal_set_imax(f, fractal_get_imax(f) - 10);
+                debug("Event: decrease imax by 10 to %d.", fractal_get_imax(f));
+              }
+              else
+                update = false;
             }
             break;
 
