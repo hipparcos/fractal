@@ -54,4 +54,14 @@ inline void frame_set3(struct frame* f, double xmin, double xmax, double ymin)
   debug("Frame: %.6fx%.6fx%.6fx%.6f", xmin, xmax, ymin, f->ymax);
 }
 
+inline double frame_width(struct frame* f)
+{
+  return f->xmax - f->xmin;
+}
+
+inline double frame_height(struct frame* f)
+{
+  return f->ymax - f->ymin;
+}
+
 #endif
