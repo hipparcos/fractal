@@ -69,7 +69,7 @@ void event_loop(struct fractal* f)
                 (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL)
             {
               frame_zoom(fm, ZOOM_FACTOR);
-              debug("Event: zoom+ x%.1f.", ZOOM_FACTOR);
+              debug("Event: zoom+ x%.1f", ZOOM_FACTOR);
             }
             else
             {
@@ -87,7 +87,7 @@ void event_loop(struct fractal* f)
                 (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL)
             {
               frame_zoom(fm, -ZOOM_FACTOR);
-              debug("Event: zoom- x%.1f.", ZOOM_FACTOR);
+              debug("Event: zoom- x%.1f", ZOOM_FACTOR);
             }
             else
             {

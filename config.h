@@ -5,7 +5,7 @@
 #define WIDTH  800
 #define HEIGHT 600
 #define BPP 32
-#define ZOOM_FACTOR 2
+#define ZOOM_FACTOR 2.0
 #define TRANSLATE_FACTOR 0.25
 
 #define JULIA
