@@ -7,8 +7,6 @@
 #include "mandelbrot.h"
 #include "event.h"
 
-#define GEN_NAME(g) #g
-
 int main(int argc, char* argv[])
 {
   debug("*** %s ***", NAME);
@@ -16,9 +14,8 @@ int main(int argc, char* argv[])
   debug("Init...");
   fractal_env_init(NAME);
 
-  debug("Create fractal: %ix%ix%i, generator: %s, imax: %i", WIDTH, HEIGHT, BPP,
-      GEN_NAME(mandelbrot), IMAX);
-  struct fractal* f = fractal_create(WIDTH, HEIGHT, BPP, mandelbrot, IMAX);
+  debug("Create fractal: %ix%ix%i, imax: %i", WIDTH, HEIGHT, BPP, IMAX);
+  struct fractal* f = fractal_create(WIDTH, HEIGHT, BPP, GENERATOR, IMAX);
 
   debug("Set default frame values.");
   struct frame* fm = fractal_get_frame(f);

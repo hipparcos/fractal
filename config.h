@@ -5,6 +5,7 @@
 #define WIDTH  800
 #define HEIGHT 600
 #define BPP 32
+#define GENERATOR mandelbrot
 #define XMIN -2.1
 #define XMAX 0.7
 #define YMIN -1.05
