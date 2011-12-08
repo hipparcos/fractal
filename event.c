@@ -91,6 +91,12 @@ void event_loop(struct fractal* f)
             }
             break;
 
+          case SDLK_r:
+            debug("Event: reset.");
+            fractal_set_imax(f, IMAX);
+            frame_set3(fm, XMIN, XMAX, YMIN);
+            break;
+
           default: update = false; break;
         }
         break;
@@ -98,12 +104,6 @@ void event_loop(struct fractal* f)
       case SDL_MOUSEBUTTONDOWN:
         switch(event.button.button)
         {
-          case SDL_BUTTON_RIGHT:
-            debug("Event: reset.");
-            fractal_set_imax(f, IMAX);
-            frame_set3(fm, XMIN, XMAX, YMIN);
-            break;
-
           case SDL_BUTTON_LEFT:
             mbpx = event.button.x;
             mbpy = event.button.y;
