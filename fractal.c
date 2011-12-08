@@ -112,6 +112,27 @@ void fractal_update(struct fractal* f)
   debug_separator();
 }
 
+double fractal_globalx_to_localx(struct fractal* f, int x)
+{
+  FCHECK(f,.0);
+
+  struct frame* fm = f->frame;
+  return fm->xmin + (fm->xmax - fm->xmin) * ((double)x / f->screen->w);
+}
+
+double fractal_globaly_to_localy(struct fractal* f, int y)
+{
+  FCHECK(f,.0);
+
+  struct frame* fm = f->frame;
+  return fm->ymin + (fm->ymax - fm->ymin) * ((double)y / f->screen->h);
+}
+
+void fractal_set_imax(struct fractal* f, int imax)
+{
+  f->imax = imax;
+}
+
 void fractal_env_init(const char* caption)
 {
   SDL_Init(SDL_INIT_VIDEO);

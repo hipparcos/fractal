@@ -4,12 +4,14 @@
 #include <SDL/SDL.h>
 
 #include "debug.h"
+#include "config.h"
 
 void event_loop(struct fractal* f)
 {
   bool quit = false;
   bool update = true;
   SDL_Event	event;
+  Uint16 mbpx = 0, mbpy = 0, mbrx = 0, mbry = 0;
   struct frame* fm = fractal_get_frame(f);
 
   while(!quit)
@@ -63,6 +65,54 @@ void event_loop(struct fractal* f)
             break;
 
           default: update = false; break;
+        }
+        break;
+
+      case SDL_MOUSEBUTTONDOWN:
+        switch(event.button.button)
+        {
+          case SDL_BUTTON_RIGHT:
+            debug("Event: reset.");
+            fractal_set_imax(f, IMAX);
+            frame_set3(fm, XMIN, XMAX, YMIN);
+            break;
+
+          case SDL_BUTTON_LEFT:
+            mbpx = event.button.x;
+            mbpy = event.button.y;
+            update = false;
+            break;
+        }
+        break;
+      
+      case SDL_MOUSEBUTTONUP:
+        switch(event.button.button)
+        {
+          case SDL_BUTTON_LEFT:
+            debug("Event: zoom.");
+            mbrx = event.button.x;
+            mbry = event.button.y;
+
+            if(mbrx != mbpx && mbry != mbpy)
+            {
+              double xmax,xmin,ymin;
+
+              if(mbrx > mbpx)
+              {
+                xmin = fractal_globalx_to_localx(f, mbpx);
+                xmax = fractal_globalx_to_localx(f, mbrx);
+              }
+              else
+              {
+                xmin = fractal_globalx_to_localx(f, mbrx);
+                xmax = fractal_globalx_to_localx(f, mbpx);
+              }
+
+              ymin = fractal_globaly_to_localy(f, mbpy);
+
+              frame_set3(fm, xmin, xmax, ymin);
+            }
+            break;
         }
         break;
 

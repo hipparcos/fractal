@@ -17,6 +17,9 @@ struct frame* fractal_get_frame(struct fractal*);
 void fractal_clear(struct fractal*);
 void fractal_display(struct fractal*);
 void fractal_update(struct fractal*);
+double fractal_globalx_to_localx(struct fractal*, int x);
+double fractal_globaly_to_localy(struct fractal*, int y);
+void fractal_set_imax(struct fractal*, int imax);
 
 void fractal_env_init(const char*);
 void fractal_env_quit(void);
