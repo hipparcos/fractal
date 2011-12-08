@@ -19,6 +19,7 @@ void fractal_display(struct fractal*);
 void fractal_update(struct fractal*);
 double fractal_globalx_to_localx(struct fractal*, int x);
 double fractal_globaly_to_localy(struct fractal*, int y);
+int fractal_get_imax(struct fractal*);
 void fractal_set_imax(struct fractal*, int imax);
 
 void fractal_env_init(const char*);

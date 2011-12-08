@@ -64,6 +64,15 @@ void event_loop(struct fractal* f)
             debug("Event: move left.");
             break;
 
+          case SDLK_KP_PLUS:
+            fractal_set_imax(f, fractal_get_imax(f) + 10);
+            debug("Event: increase imax by 10 to %d.", fractal_get_imax(f));
+            break;
+          case SDLK_KP_MINUS:
+            fractal_set_imax(f, fractal_get_imax(f) - 10);
+            debug("Event: decrease imax by 10 to %d.", fractal_get_imax(f));
+            break;
+
           default: update = false; break;
         }
         break;

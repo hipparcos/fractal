@@ -128,9 +128,16 @@ double fractal_globaly_to_localy(struct fractal* f, int y)
   return fm->ymin + (fm->ymax - fm->ymin) * ((double)y / f->screen->h);
 }
 
+int fractal_get_imax(struct fractal* f)
+{
+  return f->imax;
+}
 void fractal_set_imax(struct fractal* f, int imax)
 {
-  f->imax = imax;
+  FCHECK(f,);
+
+  if(imax > 0)
+    f->imax = imax;
 }
 
 void fractal_env_init(const char* caption)
