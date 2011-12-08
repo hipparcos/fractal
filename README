@@ -4,7 +4,8 @@
                      (c) Adrien Aucher 2011
               MIT license (see LICENSE for details)
 
-fractal is a simple SDL application that displays a Mandelbrot set.
+Fractal is a simple SDL application that displays fractals. It can render
+mandelbrot and julia sets. You can write your own generators (see generator/).
 
 Commands:
 ---------
@@ -17,3 +18,10 @@ arrows        move
 CTRL+`+`      zoom+ x2
 CTRL+`-`      zoom- x2
 click + drag  zoom (box)
+
+Todo:
+-----
+* Better generators API
+* Better config
+* More generators
+* Write doc
