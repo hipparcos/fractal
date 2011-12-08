@@ -78,6 +78,8 @@ void fractal_update(struct fractal* f)
 
   debug_separator();
 
+  struct frame* fm = f->frame;
+
   debug("Update: start.");
   Uint32 tstart = SDL_GetTicks();
 
@@ -92,7 +94,9 @@ void fractal_update(struct fractal* f)
       // Render a pixel.
       struct color c = f->generator(
           x,y,f->screen->w,f->screen->h,
-          f->frame->xmin,f->frame->xmax,f->frame->ymin,f->frame->ymax,
+          fm->xmin + x * (frame_width(fm) / f->screen->w),  // lx
+          fm->ymin + y * (frame_height(fm) / f->screen->h), // ly
+          fm->xmin,fm->xmax,fm->ymin,fm->ymax,
           f->imax);
       // Set pixel color.
       *((Uint32*)(f->buffer->pixels) + x + y * f->screen->w)

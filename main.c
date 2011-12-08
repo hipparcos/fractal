@@ -4,8 +4,10 @@
 #include "config.h"
 #include "debug.h"
 #include "fractal.h"
-#include "mandelbrot.h"
 #include "event.h"
+
+/* Generators */
+#include "generator/mandelbrot.h"
 
 int main(int argc, char* argv[])
 {

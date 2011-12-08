@@ -1,9 +1,10 @@
 #include "mandelbrot.h"
 
-#include "math.h"
+#include <math.h>
 
 struct color mandelbrot(
     int x, int y, int w, int h,
+    double lx, double ly,
     double lxmin, double lxmax, double lymin, double lymax,
     int imax)
 {
@@ -16,10 +17,8 @@ struct color mandelbrot(
   double tmprp = 0;
 
   /* Data */
-  double const dx = (lxmax - lxmin) / w;
-  double const dy = (lymax - lymin) / h;
-  double realpart = lxmin + x * dx;
-  double imgpart = lymin + y * dy;
+  double realpart = lx;
+  double imgpart = ly;
 
   /* Algorythm */
   while ((zmodule < 4) && (n < imax))

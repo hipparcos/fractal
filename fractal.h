@@ -8,6 +8,7 @@ struct fractal;
 
 typedef struct color (*fractal_generator)(
     int x, int y, int w, int h,
+    double lx, double ly,
     double lxmin, double lxmax, double lymin, double lymax,
     int imax);
 
