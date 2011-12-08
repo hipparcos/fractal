@@ -15,8 +15,7 @@ int main(int argc, char* argv[])
   debug("*** %s ***", NAME);
   debug("Init...");
   
-  SDL_Init(SDL_INIT_VIDEO);
-  SDL_WM_SetCaption(NAME, NULL);
+  fractal_env_init(NAME);
 
   debug("Create fractal: %ix%ix%i, generator: %s, imax: %i", WIDTH, HEIGHT, BPP, GEN_NAME(mandelbrot), IMAX);
   struct fractal* f = fractal_create(WIDTH, HEIGHT, BPP, mandelbrot, IMAX);
@@ -79,7 +78,7 @@ int main(int argc, char* argv[])
 
   fractal_destroy(f);
 
-  SDL_Quit();
+  fractal_env_quit();
 
   debug("Goodbye :)");
 

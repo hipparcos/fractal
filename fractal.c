@@ -111,3 +111,20 @@ void fractal_update(struct fractal* f)
 
   debug_separator();
 }
+
+void fractal_env_init(const char* caption)
+{
+  SDL_Init(SDL_INIT_VIDEO);
+
+  fractal_env_set_caption(caption);
+}
+
+void fractal_env_quit(void)
+{
+  SDL_Quit();
+}
+
+void fractal_env_set_caption(const char* caption)
+{
+  SDL_WM_SetCaption(caption, NULL);
+}

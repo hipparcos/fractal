@@ -20,4 +20,8 @@ void fractal_clear(struct fractal*);
 void fractal_display(struct fractal*);
 void fractal_update(struct fractal*);
 
+void fractal_env_init(const char*);
+void fractal_env_quit(void);
+void fractal_env_set_caption(const char*);
+
 #endif
