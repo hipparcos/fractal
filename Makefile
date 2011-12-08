@@ -4,7 +4,7 @@ DEBUG=-O3 -DDEBUG
 LIBS=-lSDL -lm
 
 CFLAGS=-Wall -c -std=c99 $(DEBUG)
-LDFLAGS=-Wall $(LIBS)
+LDFLAGS=-Wall -zmuldefs $(LIBS)
 CC=gcc
 RM=rm -rf
 OBJECTS=$(SOURCES:.c=.o)

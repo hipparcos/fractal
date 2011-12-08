@@ -8,6 +8,7 @@
 
 /* Generators */
 #include "generator/mandelbrot.h"
+#include "generator/julia.h"
 
 int main(int argc, char* argv[])
 {
