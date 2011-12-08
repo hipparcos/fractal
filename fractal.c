@@ -54,6 +54,11 @@ void fractal_display(struct fractal* f)
   SDL_Flip(f->screen);
 }
 
+inline Uint32 color_to_sdl(struct color c, SDL_PixelFormat* fmt)
+{
+  return SDL_MapRGB(fmt, c.r, c.g, c.b);
+}
+
 void fractal_update(struct fractal* f)
 {
   FCHECK(f,);
@@ -71,9 +76,14 @@ void fractal_update(struct fractal* f)
   {
     for(int x = 0; x < f->screen->w; x++)
     {
-      Uint32 color = f->generator(x,y,f->screen->w,f->screen->h,0,0,0,0);
+      // Render a pixel.
+      struct color c = f->generator(
+          x,y,f->screen->w,f->screen->h,
+          -2,0.5,(0.8 - (0.5+2) * (double)f->screen->h/f->screen->w),0.8,
+          50);
       // Set pixel color.
-      *((Uint32*)(f->buffer->pixels) + x + y * f->screen->w) = color;
+      *((Uint32*)(f->buffer->pixels) + x + y * f->screen->w)
+        = color_to_sdl(c, f->buffer->format);
     }
   }
 
@@ -85,6 +95,6 @@ void fractal_update(struct fractal* f)
 
   Uint32 tend = SDL_GetTicks();
   debug("Update: updated in %i miliseconds.", tend - tstart);
-  
+
   debug_separator();
 }

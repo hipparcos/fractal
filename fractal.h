@@ -3,12 +3,14 @@
 
 #include <SDL/SDL.h>
 
+#include "color.h"
+
 struct fractal;
 
-typedef Uint32 (*fractal_generator)(
+typedef struct color (*fractal_generator)(
     int x, int y, int w, int h,
-    double lxmin, double lxmax, double lymin, double lymax
-    );
+    double lxmin, double lxmax, double lymin, double lymax,
+    int imax);
 
 struct fractal* fractal_create(int width, int height, int bpp, fractal_generator);
 void fractal_destroy(struct fractal*);

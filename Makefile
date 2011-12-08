@@ -1,7 +1,7 @@
 EXE=fractal
 SOURCES=main.c debug.c fractal.c mandelbrot.c
 DEBUG=-O3 -DDEBUG
-LIBS=-lSDL
+LIBS=-lSDL -lm
 
 CFLAGS=-Wall -c -std=c99 $(DEBUG)
 LDFLAGS=-Wall $(LIBS)

@@ -3,9 +3,9 @@
 
 #include "fractal.h"
 
-Uint32 mandelbrot(
+struct color mandelbrot(
     int x, int y, int w, int h,
-    double lxmin, double lxmax, double lymin, double lymax
-    );
+    double lxmin, double lxmax, double lymin, double lymax,
+    int imax);
 
 #endif
