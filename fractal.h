@@ -1,8 +1,6 @@
 #ifndef H_FRACTAL
 #define H_FRACTAL
 
-#include <SDL/SDL.h>
-
 #include "color.h"
 #include "frame.h"
 

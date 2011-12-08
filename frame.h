@@ -3,6 +3,8 @@
 
 #include "debug.h"
 
+#include <stdlib.h>
+
 struct frame
 {
   double xmin;

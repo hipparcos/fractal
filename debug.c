@@ -1,7 +1,6 @@
 #include "debug.h"
 
 #include <stdio.h>
-#include <stddef.h>
 
 void debug(const char* format, ...)
 {
