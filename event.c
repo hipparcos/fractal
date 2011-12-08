@@ -65,12 +65,30 @@ void event_loop(struct fractal* f)
             break;
 
           case SDLK_KP_PLUS:
-            fractal_set_imax(f, fractal_get_imax(f) + 10);
-            debug("Event: increase imax by 10 to %d.", fractal_get_imax(f));
+            if((event.key.keysym.mod & KMOD_LCTRL) == KMOD_LCTRL ||
+                (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL)
+            {
+              frame_zoom(fm, 2);
+              debug("Event: zoom+ x2.");
+            }
+            else
+            {
+              fractal_set_imax(f, fractal_get_imax(f) + 10);
+              debug("Event: increase imax by 10 to %d.", fractal_get_imax(f));
+            }
             break;
           case SDLK_KP_MINUS:
-            fractal_set_imax(f, fractal_get_imax(f) - 10);
-            debug("Event: decrease imax by 10 to %d.", fractal_get_imax(f));
+            if((event.key.keysym.mod & KMOD_LCTRL) == KMOD_LCTRL ||
+                (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL)
+            {
+              frame_zoom(fm, -2);
+              debug("Event: zoom- x2.");
+            }
+            else
+            {
+              fractal_set_imax(f, fractal_get_imax(f) - 10);
+              debug("Event: decrease imax by 10 to %d.", fractal_get_imax(f));
+            }
             break;
 
           default: update = false; break;

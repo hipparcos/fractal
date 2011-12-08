@@ -4,6 +4,7 @@
 #include "debug.h"
 
 #include <stdlib.h>
+#include <math.h>
 
 struct frame
 {
@@ -62,6 +63,21 @@ inline double frame_width(struct frame* f)
 inline double frame_height(struct frame* f)
 {
   return f->ymax - f->ymin;
+}
+
+inline void frame_zoom(struct frame* f, double factor)
+{
+  if(fpclassify(factor) != FP_NORMAL)
+    return;
+
+  double xmax,xmin,ymin;
+  double z = (1 - ((factor > .0) ? 1/factor : -factor)) / 2;
+
+  xmin = f->xmin + frame_width(f) * z;
+  xmax = f->xmax - frame_width(f) * z;
+  ymin = f->ymin + frame_height(f) * z;
+
+  frame_set3(f, xmin, xmax, ymin);
 }
 
 #endif
