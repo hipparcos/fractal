@@ -10,5 +10,7 @@
 #define XMAX 0.7
 #define YMIN -1.05
 #define IMAX 50
+#define ZOOM_FACTOR 2
+#define TRANSLATE_FACTOR 0.25
 
 #endif

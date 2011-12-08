@@ -48,19 +48,19 @@ void event_loop(struct fractal* f)
             break;
 
           case SDLK_UP:
-            frame_translate(fm, .0, -(frame_height(fm)/4));
+            frame_translate(fm, .0, -(frame_height(fm)*TRANSLATE_FACTOR));
             debug("Event: move up.");
             break;
           case SDLK_DOWN:
-            frame_translate(fm, .0, frame_height(fm)/4);
+            frame_translate(fm, .0, frame_height(fm)*TRANSLATE_FACTOR);
             debug("Event: move down.");
             break;
           case SDLK_RIGHT:
-            frame_translate(fm, frame_width(fm)/4, .0);
+            frame_translate(fm, frame_width(fm)*TRANSLATE_FACTOR, .0);
             debug("Event: move right.");
             break;
           case SDLK_LEFT:
-            frame_translate(fm, -(frame_width(fm)/4), .0);
+            frame_translate(fm, -(frame_width(fm)*TRANSLATE_FACTOR), .0);
             debug("Event: move left.");
             break;
 
@@ -68,8 +68,8 @@ void event_loop(struct fractal* f)
             if((event.key.keysym.mod & KMOD_LCTRL) == KMOD_LCTRL ||
                 (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL)
             {
-              frame_zoom(fm, 2);
-              debug("Event: zoom+ x2.");
+              frame_zoom(fm, ZOOM_FACTOR);
+              debug("Event: zoom+ x%.1f.", ZOOM_FACTOR);
             }
             else
             {
@@ -86,8 +86,8 @@ void event_loop(struct fractal* f)
             if((event.key.keysym.mod & KMOD_LCTRL) == KMOD_LCTRL ||
                 (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL)
             {
-              frame_zoom(fm, -2);
-              debug("Event: zoom- x2.");
+              frame_zoom(fm, -ZOOM_FACTOR);
+              debug("Event: zoom- x%.1f.", ZOOM_FACTOR);
             }
             else
             {
@@ -126,7 +126,7 @@ void event_loop(struct fractal* f)
         switch(event.button.button)
         {
           case SDL_BUTTON_LEFT:
-            debug("Event: zoom.");
+            debug("Event: zoom (mouse).");
             mbrx = event.button.x;
             mbry = event.button.y;
 
