@@ -18,8 +18,12 @@ int main(int argc, char* argv[])
   SDL_Init(SDL_INIT_VIDEO);
   SDL_WM_SetCaption(NAME, NULL);
 
-  debug("Create fractal: %ix%ix%i, generator: %s", WIDTH, HEIGHT, BPP, GEN_NAME(mandelbrot));
-  struct fractal* f = fractal_create(WIDTH, HEIGHT, BPP, mandelbrot);
+  debug("Create fractal: %ix%ix%i, generator: %s, imax: %i", WIDTH, HEIGHT, BPP, GEN_NAME(mandelbrot), IMAX);
+  struct fractal* f = fractal_create(WIDTH, HEIGHT, BPP, mandelbrot, IMAX);
+
+  debug("Set default frame values.");
+  struct frame* fm = fractal_get_frame(f);
+  frame_set3(fm, XMIN, XMAX, YMIN);
 
   debug_separator();
 

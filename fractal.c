@@ -3,6 +3,7 @@
 #include <SDL/SDL.h>
 
 #include "debug.h"
+#include "frame.h"
 
 #define FCHECK(f,r) \
   if(!f) \
@@ -13,9 +14,11 @@ struct fractal
   SDL_Surface* screen;
   SDL_Surface* buffer;
   fractal_generator generator;
+  struct frame* frame;
+  int imax;
 };
 
-struct fractal* fractal_create(int width, int height, int bpp, fractal_generator gen)
+struct fractal* fractal_create(int width, int height, int bpp, fractal_generator gen, int imax)
 {
   struct fractal* f = malloc(sizeof(*f));
 
@@ -27,6 +30,10 @@ struct fractal* fractal_create(int width, int height, int bpp, fractal_generator
 
   fractal_clear(f);
 
+  f->frame = frame_create();
+  f->frame->ratio = (double)height/width;
+  f->imax = imax;
+
   return f;
 }
 
@@ -36,7 +43,13 @@ void fractal_destroy(struct fractal* f)
 
   SDL_FreeSurface(f->buffer);
   SDL_FreeSurface(f->screen);
+  frame_destroy(f->frame);
   free(f);
+}
+
+struct frame* fractal_get_frame(struct fractal* f)
+{
+  return f->frame;
 }
 
 void fractal_clear(struct fractal* f)
@@ -79,8 +92,8 @@ void fractal_update(struct fractal* f)
       // Render a pixel.
       struct color c = f->generator(
           x,y,f->screen->w,f->screen->h,
-          -2,0.5,(0.8 - (0.5+2) * (double)f->screen->h/f->screen->w),0.8,
-          50);
+          f->frame->xmin,f->frame->xmax,f->frame->ymin,f->frame->ymax,
+          f->imax);
       // Set pixel color.
       *((Uint32*)(f->buffer->pixels) + x + y * f->screen->w)
         = color_to_sdl(c, f->buffer->format);
