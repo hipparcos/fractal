@@ -1,83 +1,34 @@
 #ifndef H_FRAME
 #define H_FRAME
 
-#include "debug.h"
-
-#include <stdlib.h>
-#include <math.h>
-
-struct frame
-{
-  double xmin;
-  double xmax;
-  double ymin;
-  double ymax;
-  double ratio;
+/** frame is a view in local coordinates. */
+struct frame {
+    double xmin;
+    double xmax;
+    double ymin;
+    double ymax;
+    double ratio;
 };
 
-inline void frame_reset(struct frame* f)
-{
-  f->xmin = 0;
-  f->xmax = 0;
-  f->ymin = 0;
-  f->ymax = 0;
-}
-
-inline struct frame* frame_create()
-{
-  struct frame* f = malloc(sizeof(*f));
-
-  frame_reset(f);
-
-  return f;
-}
-
-inline void frame_destroy(struct frame* f)
-{
-  free(f);
-}
-
-inline void frame_translate(struct frame* f, double x, double y)
-{
-  f->xmin += x;
-  f->xmax += x;
-  f->ymin += y;
-  f->ymax += y;
-}
-
-inline void frame_set3(struct frame* f, double xmin, double xmax, double ymin)
-{
-  f->xmin = xmin;
-  f->xmax = xmax;
-  f->ymin = ymin;
-  f->ymax = ymin + (xmax - xmin) * f->ratio;
-
-  debug("Frame: %.6fx%.6fx%.6fx%.6f", xmin, xmax, ymin, f->ymax);
-}
-
-inline double frame_width(struct frame* f)
-{
-  return f->xmax - f->xmin;
-}
-
-inline double frame_height(struct frame* f)
-{
-  return f->ymax - f->ymin;
-}
-
-inline void frame_zoom(struct frame* f, double factor)
-{
-  if(fpclassify(factor) != FP_NORMAL)
-    return;
-
-  double xmax,xmin,ymin;
-  double z = (1 - ((factor > .0) ? 1/factor : -factor)) / 2;
-
-  xmin = f->xmin + frame_width(f) * z;
-  xmax = f->xmax - frame_width(f) * z;
-  ymin = f->ymin + frame_height(f) * z;
-
-  frame_set3(f, xmin, xmax, ymin);
-}
+/** frame_reset sets fm components to 0. */
+void   frame_reset(struct frame* fm);
+/** frame_copy copy src into dest. */
+void   frame_copy(struct frame* dest, const struct frame* src);
+/** frame_set set xmin, xmax, ymin & deduces ymax from them. */
+void   frame_set(struct frame* fm, double xmin, double xmax, double ymin);
+/** frame_set_ymax set ymax using xmin, xmax & ymin. */
+void   frame_set_ymax(struct frame* fm);
+/** frame_width returns the width of a frame. */
+double frame_width(struct frame* fm);
+/** frame_height returns the height of a frame. */
+double frame_height(struct frame* fm);
+/** frame_translate translates a frame. */
+void   frame_translate(struct frame* fm, double x, double y);
+/** frame_zoom zooms inside a frame. */
+void   frame_zoom(struct frame* fm, double factor);
+/** frame_globalx_to_localx transforms a screen x coord to a frame x coord. */
+double frame_globalx_to_localx(struct frame* fm, int x, int width);
+/** frame_globaly_to_localy transforms a screen y coord to a frame y coord. */
+double frame_globaly_to_localy(struct frame* fm, int y, int height);
 
 #endif

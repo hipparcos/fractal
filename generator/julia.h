@@ -3,10 +3,6 @@
 
 #include "../fractal.h"
 
-struct color julia(
-    int x, int y, int w, int h,
-    double lx, double ly,
-    double lxmin, double lxmax, double lymin, double lymax,
-    int imax);
+struct color julia(double lx, double ly, int imax);
 
 #endif

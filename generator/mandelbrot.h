@@ -3,10 +3,6 @@
 
 #include "../fractal.h"
 
-struct color mandelbrot(
-    int x, int y, int w, int h,
-    double lx, double ly,
-    double lxmin, double lxmax, double lymin, double lymax,
-    int imax);
+struct color mandelbrot(double lx, double ly, int imax);
 
 #endif

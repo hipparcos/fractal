@@ -1,23 +1,61 @@
-EXE=fractal
-SOURCES=main.c debug.c fractal.c event.c generator/*
-DEBUG=-O3 -DDEBUG
-LIBS=-lSDL -lm
+out=fractal
+sources=main.c frame.c fractal.c generator/julia.c generator/mandelbrot.c
+build_dir:=build
 
-CFLAGS=-Wall -c -std=c99 $(DEBUG)
-LDFLAGS=-Wall -zmuldefs $(LIBS)
+objects=$(addprefix $(build_dir)/,$(sources:%.c=%.o))
+deps=$(addprefix $(build_dir)/,$(sources:%.c=%.d))
+
 CC=gcc
-RM=rm -rf
-OBJECTS=$(SOURCES:.c=.o)
+SHELL:=/bin/bash
+DEBUG?=-ggdb3 -O0
+CFLAGS:=-Wall -std=c11 $(DEBUG)
+LDFLAGS:=-Wall -zmuldefs -lSDL -lm
+VGFLAGS?=\
+	--quiet --leak-check=full --show-leak-kinds=all \
+	--track-origins=yes --error-exitcode=1 --error-limit=no \
+	--suppressions=./valgrind-libraryleaks.supp
 
-all: $(SOURCES) $(EXE)
+# Use second expansion to create $(build_dir) on demand.
+.SECONDEXPANSION:
 
-.c.o:
-	$(CC) $(CFLAGS) $< -o $@
+all: build
 
-$(EXE): $(OBJECTS)
-	$(CC) $(LDFLAGS) $(OBJECTS) -o $@
+build: $(out)
 
 clean:
-	$(RM) *.o $(EXE)
+	rm -f $(objects) $(deps) tags $(out)
 
-rebuild: clean all
+leakcheck: $(out)
+	valgrind $(VGFLAGS) ./$^
+
+# Build executable.
+$(out): $(objects)
+	$(CC) $(LDFLAGS) $(LDLIBS) $^ -o $@
+
+# Generate O file in $(build_dir); .f is a directory marker.
+$(build_dir)/%.o: %.c $$(@D)/.f
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+# Generate C source files dependancies in $(build_dir); .f is a directory marker.
+$(build_dir)/%.d: %.c $$(@D)/.f
+	@set -e; rm -f $@; \
+		$(CC) -MM $(CFLAGS) $< > $@.$$$$; \
+		sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
+		rm -f $@.$$$$
+
+# Include dependancies makefiles.
+include $(deps)
+
+# Generate tags file.
+tags:
+	ctags -R .
+
+# Directory marker.
+%/.f:
+	@mkdir -p $(dir $@)
+	@touch $@
+
+.PRECIOUS: %/.f
+
+# List of all special targets (always out-of-date).
+.PHONY: all build clean tags

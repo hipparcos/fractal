@@ -4,27 +4,32 @@
 #include "color.h"
 #include "frame.h"
 
+struct win_info {
+    int width;
+    int height;
+    int bpp;
+};
+
+typedef struct color (*fractal_generator)(double lx, double ly, int imax);
+
+struct fractal_info {
+    fractal_generator generator;
+    struct frame default_frame;
+    int resolution;
+};
+
 struct fractal;
 
-typedef struct color (*fractal_generator)(
-    int x, int y, int w, int h,
-    double lx, double ly,
-    double lxmin, double lxmax, double lymin, double lymax,
-    int imax);
-
-struct fractal* fractal_create(int width, int height, int bpp, fractal_generator, int imax);
+struct fractal* fractal_create(struct win_info, struct fractal_info);
 void fractal_destroy(struct fractal*);
-struct frame* fractal_get_frame(struct fractal*);
 void fractal_clear(struct fractal*);
 void fractal_display(struct fractal*);
-void fractal_update(struct fractal*);
-double fractal_globalx_to_localx(struct fractal*, int x);
-double fractal_globaly_to_localy(struct fractal*, int y);
+void fractal_update(struct fractal*, struct frame*);
 int fractal_get_imax(struct fractal*);
 void fractal_set_imax(struct fractal*, int imax);
-
-void fractal_env_init(const char*);
-void fractal_env_quit(void);
-void fractal_env_set_caption(const char*);
+int fractal_get_width(struct fractal*);
+int fractal_get_height(struct fractal*);
+struct frame fractal_get_default_frame(struct fractal*);
+int fractal_get_default_resolution(struct fractal*);
 
 #endif

@@ -2,161 +2,115 @@
 
 #include <SDL/SDL.h>
 
-#include "debug.h"
-#include "frame.h"
-
-#define FCHECK(f,r) \
-  if(!f) \
-    return r;
-
-struct fractal
-{
-  SDL_Surface* screen;
-  SDL_Surface* buffer;
-  fractal_generator generator;
-  struct frame* frame;
-  int imax;
+struct fractal {
+    SDL_Surface* screen;
+    SDL_Surface* buffer;
+    fractal_generator generator;
+    int imax;
+    struct frame default_frame;
+    int default_resolution;
 };
 
-struct fractal* fractal_create(int width, int height, int bpp, fractal_generator gen, int imax)
-{
-  struct fractal* f = malloc(sizeof(*f));
-
-  FCHECK(f,NULL);
-
-  f->screen = SDL_SetVideoMode(width, height, bpp, SDL_HWSURFACE);
-  f->buffer = SDL_CreateRGBSurface(SDL_HWSURFACE, width, height, bpp, 0, 0, 0, 0);
-  f->generator = gen;
-
-  fractal_clear(f);
-
-  f->frame = frame_create();
-  f->frame->ratio = (double)height/width;
-  f->imax = imax;
-
-  return f;
-}
-
-void fractal_destroy(struct fractal* f)
-{
-  FCHECK(f,);
-
-  SDL_FreeSurface(f->buffer);
-  SDL_FreeSurface(f->screen);
-  frame_destroy(f->frame);
-  free(f);
-}
-
-struct frame* fractal_get_frame(struct fractal* f)
-{
-  return f->frame;
-}
-
-void fractal_clear(struct fractal* f)
-{
-  FCHECK(f,);
-
-  SDL_FillRect(f->screen, NULL, SDL_MapRGB(f->screen->format, 0, 0, 0));
-}
-
-void fractal_display(struct fractal* f)
-{
-  FCHECK(f,);
-
-  debug("Display: flip screen.");
-  SDL_Flip(f->screen);
-}
-
-inline Uint32 color_to_sdl(struct color c, SDL_PixelFormat* fmt)
-{
-  return SDL_MapRGB(fmt, c.r, c.g, c.b);
-}
-
-void fractal_update(struct fractal* f)
-{
-  FCHECK(f,);
-
-  debug_separator();
-
-  struct frame* fm = f->frame;
-
-  debug("Update: start.");
-  Uint32 tstart = SDL_GetTicks();
-
-  debug("Update: clear buffer.");
-  SDL_FillRect(f->buffer, NULL, SDL_MapRGB(f->buffer->format, 0, 0, 0));
-
-  debug("Update: render loop.");
-  for(int y = 0; y < f->screen->h; y++)
-  {
-    for(int x = 0; x < f->screen->w; x++)
-    {
-      // Render a pixel.
-      struct color c = f->generator(
-          x,y,f->screen->w,f->screen->h,
-          fm->xmin + x * (frame_width(fm) / f->screen->w),  // lx
-          fm->ymin + y * (frame_height(fm) / f->screen->h), // ly
-          fm->xmin,fm->xmax,fm->ymin,fm->ymax,
-          f->imax);
-      // Set pixel color.
-      *((Uint32*)(f->buffer->pixels) + x + y * f->screen->w)
-        = color_to_sdl(c, f->buffer->format);
+struct fractal* fractal_create(struct win_info wi, struct fractal_info fi) {
+    struct fractal* f = malloc(sizeof(struct fractal));
+    if (!f) {
+        return NULL;
     }
-  }
 
-  debug("Update: blit buffer.");
-  SDL_Rect rect;
-  rect.x = 0;
-  rect.y = 0;
-  SDL_BlitSurface(f->buffer, NULL, f->screen, &rect);
+    f->screen = SDL_SetVideoMode(wi.width, wi.height, wi.bpp, SDL_HWSURFACE);
+    f->buffer = SDL_CreateRGBSurface(SDL_HWSURFACE,
+            wi.width, wi.height, wi.bpp, 0, 0, 0, 0);
+    f->generator = fi.generator;
+    f->imax = fi.resolution;
+    f->default_frame = fi.default_frame;
+    f->default_resolution = fi.resolution;
 
-  Uint32 tend = SDL_GetTicks();
-  debug("Update: updated in %i miliseconds.", tend - tstart);
+    fractal_clear(f);
 
-  debug_separator();
+    return f;
 }
 
-double fractal_globalx_to_localx(struct fractal* f, int x)
-{
-  FCHECK(f,.0);
-
-  struct frame* fm = f->frame;
-  return fm->xmin + (fm->xmax - fm->xmin) * ((double)x / f->screen->w);
+void fractal_destroy(struct fractal* f) {
+    if (!f) {
+        return;
+    }
+    if (f->buffer) {
+        SDL_FreeSurface(f->buffer);
+    }
+    if (f->screen) {
+        SDL_FreeSurface(f->screen);
+    }
+    free(f);
 }
 
-double fractal_globaly_to_localy(struct fractal* f, int y)
-{
-  FCHECK(f,.0);
+void fractal_clear(struct fractal* f) {
+    if (!f) {
+        return;
+    }
 
-  struct frame* fm = f->frame;
-  return fm->ymin + (fm->ymax - fm->ymin) * ((double)y / f->screen->h);
+    SDL_FillRect(f->screen, NULL, SDL_MapRGB(f->screen->format, 0, 0, 0));
 }
 
-int fractal_get_imax(struct fractal* f)
-{
-  return f->imax;
-}
-void fractal_set_imax(struct fractal* f, int imax)
-{
-  FCHECK(f,);
+void fractal_display(struct fractal* f) {
+    if (!f) {
+        return;
+    }
 
-  if(imax > 0)
-    f->imax = imax;
+    SDL_Flip(f->screen);
 }
 
-void fractal_env_init(const char* caption)
-{
-  SDL_Init(SDL_INIT_VIDEO);
+static inline Uint32 color_to_sdl(struct color c, SDL_PixelFormat* fmt) {
+    return SDL_MapRGB(fmt, c.r, c.g, c.b);
+}
+static Uint32 color_to_sdl(struct color c, SDL_PixelFormat* fmt);
 
-  fractal_env_set_caption(caption);
+void fractal_update(struct fractal* f, struct frame* fm) {
+    if (!f) {
+        return;
+    }
+
+    SDL_FillRect(f->buffer, NULL, SDL_MapRGB(f->buffer->format, 0, 0, 0));
+
+    for(int y = 0; y < f->screen->h; y++) {
+        for(int x = 0; x < f->screen->w; x++) {
+            // Render a pixel.
+            struct color c = f->generator(
+                                 fm->xmin + x * (frame_width(fm) / f->screen->w),  // lx
+                                 fm->ymin + y * (frame_height(fm) / f->screen->h), // ly
+                                 f->imax);
+            // Set pixel color.
+            *((Uint32*)(f->buffer->pixels) + x + y * f->screen->w)
+                = color_to_sdl(c, f->buffer->format);
+        }
+    }
+
+    SDL_Rect rect;
+    rect.x = 0;
+    rect.y = 0;
+    SDL_BlitSurface(f->buffer, NULL, f->screen, &rect);
 }
 
-void fractal_env_quit(void)
-{
-  SDL_Quit();
+int fractal_get_imax(struct fractal* f) {
+    return f->imax;
+}
+void fractal_set_imax(struct fractal* f, int imax) {
+    if(imax > 0) {
+        f->imax = imax;
+    }
 }
 
-void fractal_env_set_caption(const char* caption)
-{
-  SDL_WM_SetCaption(caption, NULL);
+int fractal_get_width(struct fractal* f) {
+    return f->screen->w;
+}
+
+int fractal_get_height(struct fractal* f) {
+    return f->screen->h;
+}
+
+struct frame fractal_get_default_frame(struct fractal* f) {
+    return f->default_frame;
+}
+
+int fractal_get_default_resolution(struct fractal* f) {
+    return f->default_resolution;
 }
