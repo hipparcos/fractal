@@ -28,8 +28,6 @@ static struct frame frm_julia = {
     .ymin= -1.25,
 };
 
-void event_loop(struct fractal* f, struct frame* fm, double zoom, double translate);
-
 int main(int argc, char* argv[]) {
     /* Default config. */
     struct win_info wi = {
@@ -92,6 +90,7 @@ int main(int argc, char* argv[]) {
     }
     poptFreeContext(optCon);
 
+    /* Init. */
     SDL_Init(SDL_INIT_VIDEO);
     SDL_WM_SetCaption(title, NULL);
 
@@ -101,25 +100,16 @@ int main(int argc, char* argv[]) {
 
     struct fractal* f = fractal_create(wi, fi);
 
-    event_loop(f, &fm, zoom, translate);
-
-    fractal_destroy(f);
-    SDL_Quit();
-
-    return EXIT_SUCCESS;
-}
-
-void event_loop(struct fractal* f, struct frame* fm, double zoom, double translate) {
+    /* Main loop. */
     bool quit = false;
     bool update = true;
     SDL_Event event;
     Uint16 mbpx = 0, mbpy = 0, mbrx = 0, mbry = 0;
-    struct frame df = {0};
 
     while(!quit) {
         /* Display */
         if(update && !quit) {
-            fractal_update(f, fm);
+            fractal_update(f, &fm);
             fractal_display(f);
         }
 
@@ -134,6 +124,7 @@ void event_loop(struct fractal* f, struct frame* fm, double zoom, double transla
 
         case SDL_KEYDOWN:
             switch(event.key.keysym.sym) {
+            case SDLK_q:
             case SDLK_ESCAPE:
                 quit = true;
                 break;
@@ -142,16 +133,16 @@ void event_loop(struct fractal* f, struct frame* fm, double zoom, double transla
                 break;
 
             case SDLK_UP:
-                frame_translate(fm, .0, -(frame_height(fm) * translate));
+                frame_translate(&fm, .0, -(frame_height(&fm) * translate));
                 break;
             case SDLK_DOWN:
-                frame_translate(fm, .0, frame_height(fm) * translate);
+                frame_translate(&fm, .0, frame_height(&fm) * translate);
                 break;
             case SDLK_RIGHT:
-                frame_translate(fm, frame_width(fm) * translate, .0);
+                frame_translate(&fm, frame_width(&fm) * translate, .0);
                 break;
             case SDLK_LEFT:
-                frame_translate(fm, -(frame_width(fm) * translate), .0);
+                frame_translate(&fm, -(frame_width(&fm) * translate), .0);
                 break;
 
             case SDLK_p:
@@ -159,15 +150,9 @@ void event_loop(struct fractal* f, struct frame* fm, double zoom, double transla
             case SDLK_KP_PLUS:
                 if((event.key.keysym.mod & KMOD_LCTRL) == KMOD_LCTRL ||
                         (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
-                    frame_zoom(fm, zoom);
+                    frame_zoom(&fm, zoom);
                 } else {
-                    unsigned long step = 10;
-                    unsigned long max_iter = fractal_get_max_iter(f);
-                    if (max_iter > ULONG_MAX - step) {
-                        fractal_set_max_iter(f, 0);
-                    } else {
-                        fractal_set_max_iter(f, max_iter + 10);
-                    }
+                    fractal_max_iter_incr(f, 10);
                 }
                 break;
             case SDLK_m:
@@ -175,22 +160,15 @@ void event_loop(struct fractal* f, struct frame* fm, double zoom, double transla
             case SDLK_KP_MINUS:
                 if((event.key.keysym.mod & KMOD_LCTRL) == KMOD_LCTRL ||
                         (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
-                    frame_zoom(fm, -zoom);
+                    frame_zoom(&fm, -zoom);
                 } else {
-                    unsigned long step = 10;
-                    unsigned long max_iter = fractal_get_max_iter(f);
-                    if (max_iter < step) {
-                        fractal_set_max_iter(f, 0);
-                    } else {
-                        fractal_set_max_iter(f, max_iter - 10);
-                    }
+                    fractal_max_iter_decr(f, 10);
                 }
                 break;
 
             case SDLK_r:
-                df = fractal_get_default_frame(f);
-                frame_copy(fm, &df);
-                fractal_set_max_iter(f, fractal_get_default_max_iter(f));
+                frame_copy(&fm, &fi.default_frame);
+                fractal_set_max_iter(f, fi.max_iter);
                 break;
 
             default:
@@ -219,16 +197,16 @@ void event_loop(struct fractal* f, struct frame* fm, double zoom, double transla
                     double xmax,xmin,ymin;
 
                     if(mbrx > mbpx) {
-                        xmin = frame_globalx_to_localx(fm, mbpx, fractal_get_width(f));
-                        xmax = frame_globalx_to_localx(fm, mbrx, fractal_get_width(f));
+                        xmin = frame_globalx_to_localx(&fm, mbpx, wi.width);
+                        xmax = frame_globalx_to_localx(&fm, mbrx, wi.width);
                     } else {
-                        xmin = frame_globalx_to_localx(fm, mbrx, fractal_get_width(f));
-                        xmax = frame_globalx_to_localx(fm, mbpx, fractal_get_width(f));
+                        xmin = frame_globalx_to_localx(&fm, mbrx, wi.width);
+                        xmax = frame_globalx_to_localx(&fm, mbpx, wi.width);
                     }
 
-                    ymin = frame_globaly_to_localy(fm, mbpy, fractal_get_height(f));
+                    ymin = frame_globaly_to_localy(&fm, mbpy, wi.height);
 
-                    frame_set(fm, xmin, xmax, ymin);
+                    frame_set(&fm, xmin, xmax, ymin);
                 }
                 break;
             }
@@ -239,4 +217,11 @@ void event_loop(struct fractal* f, struct frame* fm, double zoom, double transla
             break;
         }
     }
+
+    /* Deinit. */
+    fractal_destroy(f);
+    SDL_Quit();
+
+    return EXIT_SUCCESS;
 }
+

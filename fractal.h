@@ -24,11 +24,9 @@ void fractal_destroy(struct fractal*);
 void fractal_clear(struct fractal*);
 void fractal_display(struct fractal*);
 void fractal_update(struct fractal*, struct frame*);
-unsigned long fractal_get_max_iter(struct fractal*);
-void fractal_set_max_iter(struct fractal*, unsigned long max_iter);
-int fractal_get_width(struct fractal*);
-int fractal_get_height(struct fractal*);
-struct frame fractal_get_default_frame(struct fractal*);
-unsigned long fractal_get_default_max_iter(struct fractal*);
+
+void fractal_max_iter_incr(struct fractal*, unsigned long step);
+void fractal_max_iter_decr(struct fractal*, unsigned long step);
+void fractal_set_max_iter(struct fractal* f, unsigned long max_iter);
 
 #endif

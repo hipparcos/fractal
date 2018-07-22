@@ -1,5 +1,6 @@
 #include "fractal.h"
 
+#include <limits.h>
 #include <math.h>
 #include <SDL/SDL.h>
 
@@ -8,8 +9,6 @@ struct fractal {
     SDL_Surface* buffer;
     fractal_generator generator;
     unsigned long max_iter;
-    unsigned long default_max_iter;
-    struct frame default_frame;
 };
 
 struct fractal* fractal_create(struct win_info wi, struct fractal_info fi) {
@@ -23,8 +22,6 @@ struct fractal* fractal_create(struct win_info wi, struct fractal_info fi) {
                                      wi.width, wi.height, wi.bpp, 0, 0, 0, 0);
     f->generator = fi.generator;
     f->max_iter = fi.max_iter;
-    f->default_frame = fi.default_frame;
-    f->default_max_iter = fi.max_iter;
 
     fractal_clear(f);
 
@@ -35,6 +32,7 @@ void fractal_destroy(struct fractal* f) {
     if (!f) {
         return;
     }
+
     if (f->buffer) {
         SDL_FreeSurface(f->buffer);
     }
@@ -96,25 +94,34 @@ void fractal_update(struct fractal* f, struct frame* fm) {
     SDL_BlitSurface(f->buffer, NULL, f->screen, &rect);
 }
 
-unsigned long fractal_get_max_iter(struct fractal* f) {
-    return f->max_iter;
+void fractal_max_iter_incr(struct fractal* f, unsigned long step) {
+    if (!f) {
+        return;
+    }
+
+    if (f->max_iter > ULONG_MAX - step) {
+        f->max_iter = ULONG_MAX;
+    } else {
+        f->max_iter += step;
+    }
 }
+
+void fractal_max_iter_decr(struct fractal* f, unsigned long step) {
+    if (!f) {
+        return;
+    }
+
+    if (f->max_iter < step) {
+        f->max_iter = 0;
+    } else {
+        f->max_iter -= step;
+    }
+}
+
 void fractal_set_max_iter(struct fractal* f, unsigned long max_iter) {
+    if (!f) {
+        return;
+    }
+
     f->max_iter = max_iter;
-}
-
-int fractal_get_width(struct fractal* f) {
-    return f->screen->w;
-}
-
-int fractal_get_height(struct fractal* f) {
-    return f->screen->h;
-}
-
-struct frame fractal_get_default_frame(struct fractal* f) {
-    return f->default_frame;
-}
-
-unsigned long fractal_get_default_max_iter(struct fractal* f) {
-    return f->default_max_iter;
 }
