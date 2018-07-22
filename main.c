@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <SDL/SDL.h>
+#include <limits.h>
 
 #include "fractal.h"
 #include "generator/mandelbrot.h"
@@ -13,7 +14,7 @@ static int    height     = 600;
 static int    bpp        = 32;
 static double zoom       = 2.0;
 static double translate  = 0.25;
-static int    resolution = 50;
+static int    max_iter   = 50;
 
 static struct frame frm_mandelbrot = {
     .xmin= -2.1,
@@ -29,6 +30,10 @@ static struct frame frm_julia = {
 void event_loop(struct fractal* f, struct frame* fm, double zoom, double translate);
 
 int main(int argc, char* argv[]) {
+    (void)frm_julia;
+    (void)argc;
+    (void)argv;
+
     SDL_Init(SDL_INIT_VIDEO);
     SDL_WM_SetCaption(title, NULL);
 
@@ -40,7 +45,7 @@ int main(int argc, char* argv[]) {
     struct fractal_info fi = {
         .generator=     mandelbrot,
         .default_frame= frm_mandelbrot,
-        .resolution=    resolution
+        .max_iter=      max_iter,
     };
     struct frame fm = fi.default_frame;
     fm.ratio = (double)(width)/height;
@@ -108,10 +113,12 @@ void event_loop(struct fractal* f, struct frame* fm, double zoom, double transla
                         (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
                     frame_zoom(fm, zoom);
                 } else {
-                    if(fractal_get_imax(f) < 240) {
-                        fractal_set_imax(f, fractal_get_imax(f) + 10);
+                    unsigned long step = 10;
+                    unsigned long max_iter = fractal_get_max_iter(f);
+                    if (max_iter > ULONG_MAX - step) {
+                        fractal_set_max_iter(f, 0);
                     } else {
-                        update = false;
+                        fractal_set_max_iter(f, max_iter + 10);
                     }
                 }
                 break;
@@ -122,10 +129,12 @@ void event_loop(struct fractal* f, struct frame* fm, double zoom, double transla
                         (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
                     frame_zoom(fm, -zoom);
                 } else {
-                    if(fractal_get_imax(f) > 10) {
-                        fractal_set_imax(f, fractal_get_imax(f) - 10);
+                    unsigned long step = 10;
+                    unsigned long max_iter = fractal_get_max_iter(f);
+                    if (max_iter < step) {
+                        fractal_set_max_iter(f, 0);
                     } else {
-                        update = false;
+                        fractal_set_max_iter(f, max_iter - 10);
                     }
                 }
                 break;
@@ -133,7 +142,7 @@ void event_loop(struct fractal* f, struct frame* fm, double zoom, double transla
             case SDLK_r:
                 df = fractal_get_default_frame(f);
                 frame_copy(fm, &df);
-                fractal_set_imax(f, fractal_get_default_resolution(f));
+                fractal_set_max_iter(f, fractal_get_default_max_iter(f));
                 break;
 
             default:

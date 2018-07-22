@@ -1,42 +1,24 @@
 #include "julia.h"
 
-#include <complex.h>
-
 #ifndef JULIA_C
-#define JULIA_C -0.8+0.156*I
-//#define JULIA_C -0.4+0.6*I
-//#define JULIA_C -0.70176-0.3842*I
-//#define JULIA_C 0.285+0.01*I
+#define JULIA_C_real -0.8
+#define JULIA_C_imag 0.156
 #endif
 
-struct color julia(double lx, double ly, int imax) {
-    /* Initialisation */
-    int n = 0; /* iterator */
-    int colorf = 255/imax; /* depth */
+unsigned long julia(double lx, double ly, unsigned long max_iter) {
+    unsigned long iter = 0;
     double zrealpart = lx;
     double zimgpart = ly;
     double zmodule = 0;
     double tmprp = 0;
 
-    /* Algorythm */
-    while ((zmodule < 4) && (n < imax)) {
+    while ((zmodule < 4) && (iter < max_iter)) {
         tmprp = zrealpart;
-        zrealpart = (zrealpart * zrealpart) - (zimgpart * zimgpart) + creal(JULIA_C);
-        zimgpart = (2 * tmprp * zimgpart) + cimag(JULIA_C);
+        zrealpart = (zrealpart * zrealpart) - (zimgpart * zimgpart) + JULIA_C_real;
+        zimgpart = (2 * tmprp * zimgpart) + JULIA_C_imag;
         zmodule = (zrealpart * zrealpart) + (zimgpart * zimgpart);
-        n++;
+        iter++;
     }
 
-    /* Color */
-    int red,green,blue;
-
-    if (n < imax) {
-        red = green = blue = n * colorf;
-    } else {
-        red = green = blue = 0;
-    }
-
-    struct color c = {red, green, blue};
-
-    return c;
+    return iter;
 }

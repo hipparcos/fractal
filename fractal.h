@@ -1,7 +1,6 @@
 #ifndef H_FRACTAL
 #define H_FRACTAL
 
-#include "color.h"
 #include "frame.h"
 
 struct win_info {
@@ -10,12 +9,12 @@ struct win_info {
     int bpp;
 };
 
-typedef struct color (*fractal_generator)(double lx, double ly, int imax);
+typedef unsigned long (*fractal_generator)(double lx, double ly, unsigned long max_iter);
 
 struct fractal_info {
     fractal_generator generator;
     struct frame default_frame;
-    int resolution;
+    unsigned long max_iter;
 };
 
 struct fractal;
@@ -25,11 +24,11 @@ void fractal_destroy(struct fractal*);
 void fractal_clear(struct fractal*);
 void fractal_display(struct fractal*);
 void fractal_update(struct fractal*, struct frame*);
-int fractal_get_imax(struct fractal*);
-void fractal_set_imax(struct fractal*, int imax);
+unsigned long fractal_get_max_iter(struct fractal*);
+void fractal_set_max_iter(struct fractal*, unsigned long max_iter);
 int fractal_get_width(struct fractal*);
 int fractal_get_height(struct fractal*);
 struct frame fractal_get_default_frame(struct fractal*);
-int fractal_get_default_resolution(struct fractal*);
+unsigned long fractal_get_default_max_iter(struct fractal*);
 
 #endif

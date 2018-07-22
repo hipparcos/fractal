@@ -1,14 +1,15 @@
 #include "fractal.h"
 
+#include <math.h>
 #include <SDL/SDL.h>
 
 struct fractal {
     SDL_Surface* screen;
     SDL_Surface* buffer;
     fractal_generator generator;
-    int imax;
+    unsigned long max_iter;
+    unsigned long default_max_iter;
     struct frame default_frame;
-    int default_resolution;
 };
 
 struct fractal* fractal_create(struct win_info wi, struct fractal_info fi) {
@@ -19,11 +20,11 @@ struct fractal* fractal_create(struct win_info wi, struct fractal_info fi) {
 
     f->screen = SDL_SetVideoMode(wi.width, wi.height, wi.bpp, SDL_HWSURFACE);
     f->buffer = SDL_CreateRGBSurface(SDL_HWSURFACE,
-            wi.width, wi.height, wi.bpp, 0, 0, 0, 0);
+                                     wi.width, wi.height, wi.bpp, 0, 0, 0, 0);
     f->generator = fi.generator;
-    f->imax = fi.resolution;
+    f->max_iter = fi.max_iter;
     f->default_frame = fi.default_frame;
-    f->default_resolution = fi.resolution;
+    f->default_max_iter = fi.max_iter;
 
     fractal_clear(f);
 
@@ -59,11 +60,6 @@ void fractal_display(struct fractal* f) {
     SDL_Flip(f->screen);
 }
 
-static inline Uint32 color_to_sdl(struct color c, SDL_PixelFormat* fmt) {
-    return SDL_MapRGB(fmt, c.r, c.g, c.b);
-}
-static Uint32 color_to_sdl(struct color c, SDL_PixelFormat* fmt);
-
 void fractal_update(struct fractal* f, struct frame* fm) {
     if (!f) {
         return;
@@ -73,30 +69,38 @@ void fractal_update(struct fractal* f, struct frame* fm) {
 
     for(int y = 0; y < f->screen->h; y++) {
         for(int x = 0; x < f->screen->w; x++) {
-            // Render a pixel.
-            struct color c = f->generator(
-                                 fm->xmin + x * (frame_width(fm) / f->screen->w),  // lx
-                                 fm->ymin + y * (frame_height(fm) / f->screen->h), // ly
-                                 f->imax);
-            // Set pixel color.
+            // Calculate a pixel.
+            unsigned long iter = f->generator(
+                                     frame_globalx_to_localx(fm, x, f->screen->w),  // lx
+                                     frame_globaly_to_localy(fm, y, f->screen->h),  // ly
+                                     f->max_iter);
+
+            if (iter == f->max_iter) {
+                iter = 0;
+            }
+
+            /* Color */
+            double ratio = (double)(iter) / (double)(f->max_iter);
+            int color = floor((double)(0xff) * ratio);
+            int red   = color;
+            int green = color;
+            int blue  = color;
+
+            /* Set pixel color. */
             *((Uint32*)(f->buffer->pixels) + x + y * f->screen->w)
-                = color_to_sdl(c, f->buffer->format);
+                = SDL_MapRGB(f->buffer->format, red, green, blue);
         }
     }
 
-    SDL_Rect rect;
-    rect.x = 0;
-    rect.y = 0;
+    SDL_Rect rect = {0};
     SDL_BlitSurface(f->buffer, NULL, f->screen, &rect);
 }
 
-int fractal_get_imax(struct fractal* f) {
-    return f->imax;
+unsigned long fractal_get_max_iter(struct fractal* f) {
+    return f->max_iter;
 }
-void fractal_set_imax(struct fractal* f, int imax) {
-    if(imax > 0) {
-        f->imax = imax;
-    }
+void fractal_set_max_iter(struct fractal* f, unsigned long max_iter) {
+    f->max_iter = max_iter;
 }
 
 int fractal_get_width(struct fractal* f) {
@@ -111,6 +115,6 @@ struct frame fractal_get_default_frame(struct fractal* f) {
     return f->default_frame;
 }
 
-int fractal_get_default_resolution(struct fractal* f) {
-    return f->default_resolution;
+unsigned long fractal_get_default_max_iter(struct fractal* f) {
+    return f->default_max_iter;
 }

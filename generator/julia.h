@@ -1,8 +1,6 @@
 #ifndef H_JULIA
 #define H_JULIA
 
-#include "../fractal.h"
-
-struct color julia(double lx, double ly, int imax);
+unsigned long julia(double lx, double ly, unsigned long max_iter);
 
 #endif

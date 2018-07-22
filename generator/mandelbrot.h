@@ -1,8 +1,6 @@
 #ifndef H_MANDELBROT
 #define H_MANDELBROT
 
-#include "../fractal.h"
-
-struct color mandelbrot(double lx, double ly, int imax);
+unsigned long mandelbrot(double lx, double ly, unsigned long max_iter);
 
 #endif
