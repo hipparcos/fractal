@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <SDL/SDL.h>
 #include <limits.h>
+#include <popt.h>
 
 #include "fractal.h"
 #include "generator/mandelbrot.h"
@@ -12,7 +13,7 @@ static char*  title      = "fractal";
 static int    width      = 800;
 static int    height     = 600;
 static int    bpp        = 32;
-static double zoom       = 2.0;
+static double zoom       = 1.1;
 static double translate  = 0.25;
 static int    max_iter   = 50;
 
@@ -30,13 +31,7 @@ static struct frame frm_julia = {
 void event_loop(struct fractal* f, struct frame* fm, double zoom, double translate);
 
 int main(int argc, char* argv[]) {
-    (void)frm_julia;
-    (void)argc;
-    (void)argv;
-
-    SDL_Init(SDL_INIT_VIDEO);
-    SDL_WM_SetCaption(title, NULL);
-
+    /* Default config. */
     struct win_info wi = {
         .width=  width,
         .height= height,
@@ -47,6 +42,59 @@ int main(int argc, char* argv[]) {
         .default_frame= frm_mandelbrot,
         .max_iter=      max_iter,
     };
+
+    /* CLI arguments. */
+    struct poptOption optionsTable[] = {
+        {"width", 'w', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
+            &wi.width, 0, "Set window width", NULL},
+        {"height", 'h', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
+            &wi.height, 0, "Set window height", NULL},
+        {"zoom", 'z', POPT_ARG_DOUBLE|POPT_ARGFLAG_SHOW_DEFAULT,
+            &zoom, 0, "Set zoom factor based on screen size", NULL},
+        {"translate", 't', POPT_ARG_DOUBLE|POPT_ARGFLAG_SHOW_DEFAULT,
+            &translate, 0, "Set translation factor based on screen size", NULL},
+        {"iter", 'i', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
+            &fi.max_iter, 0, "Set max iteration limit", NULL},
+        {"generator", 'g', POPT_ARG_STRING|POPT_ARGFLAG_SHOW_DEFAULT,
+            NULL, 'g', "Set fractal generator", "mandelbrot|julia"},
+        POPT_AUTOHELP
+        POPT_TABLEEND
+    };
+
+    poptContext optCon = poptGetContext(NULL, argc, (const char**) argv, optionsTable, 0);
+    poptSetOtherOptionHelp(optCon, "[OPTIONS]");
+
+    char c;
+    char* gen;
+    while ((c = poptGetNextOpt(optCon)) >= 0) {
+        switch (c) {
+            case 'g':
+                gen = poptGetOptArg(optCon);
+                if (strcmp(gen, "julia") == 0) {
+                    fi.generator = julia;
+                    fi.default_frame = frm_julia;
+                } else {
+                    fi.generator = mandelbrot;
+                    fi.default_frame = frm_mandelbrot;
+                }
+                break;
+            default:
+                poptPrintUsage(optCon, stderr, 0);
+                exit(EXIT_FAILURE);
+        }
+    }
+    if (c < -1) {
+        /* an error occurred during option processing */
+        fprintf(stderr, "%s: %s\n",
+                poptBadOption(optCon, POPT_BADOPTION_NOALIAS),
+                poptStrerror(c));
+        exit(EXIT_FAILURE);
+    }
+    poptFreeContext(optCon);
+
+    SDL_Init(SDL_INIT_VIDEO);
+    SDL_WM_SetCaption(title, NULL);
+
     struct frame fm = fi.default_frame;
     fm.ratio = (double)(width)/height;
     frame_set_ymax(&fm);
