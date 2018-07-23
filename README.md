@@ -10,7 +10,7 @@ Building:
 
 - GNU Compiler Collection (gcc);
 - GNU Make (make);
-- GNU C Library (glibc/getopt): CLI flags parsing;
+- popt library: CLI flags parsing;
 - SDL2: rendering.
 
 Testing:
@@ -33,13 +33,13 @@ fractal renders julia and mandelbrot fractals.
 ## Commands
 
 ```bash
-escape        quit
+escape or q   quit
 u             update display
 r             reset display
 arrows        move
 p or +        max iterations per pixel + 10 (depth)
 m or -        max iterations per pixel - 10 (depth)
-CTRL+`+`      zoom+ x2
-CTRL+`-`      zoom- x2
+CTRL+`+`      zoom+ x1.1
+CTRL+`-`      zoom- x1.1
 click + drag  zoom (box)
 ```
