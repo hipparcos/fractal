@@ -36,6 +36,7 @@ fractal renders julia and mandelbrot fractals.
 escape or q   quit
 u             update display
 r             reset display
+s             switch generator
 arrows        move
 p or +        max iterations per pixel + 10 (depth)
 m or -        max iterations per pixel - 10 (depth)

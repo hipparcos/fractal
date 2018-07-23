@@ -28,6 +28,7 @@ void fractal_clear(struct fractal*);
 void fractal_update(struct fractal*, struct frame*);
 const uint32_t* fractal_get_pixels(struct fractal* f);
 
+void fractal_set_generator(struct fractal* f, fractal_generator gen);
 void fractal_max_iter_incr(struct fractal*, unsigned long step);
 void fractal_max_iter_decr(struct fractal*, unsigned long step);
 void fractal_set_max_iter(struct fractal* f, unsigned long max_iter);

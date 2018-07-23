@@ -79,6 +79,14 @@ const uint32_t* fractal_get_pixels(struct fractal* f) {
     return f->buffer->pixels;
 }
 
+void fractal_set_generator(struct fractal* f, fractal_generator gen) {
+    if (!f) {
+        return;
+    }
+
+    f->generator = gen;
+}
+
 void fractal_max_iter_incr(struct fractal* f, unsigned long step) {
     if (!f) {
         return;
