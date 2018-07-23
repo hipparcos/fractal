@@ -1,7 +1,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 #include <limits.h>
 #include <popt.h>
 
@@ -28,9 +28,16 @@ static struct frame frm_julia = {
     .ymin= -1.25,
 };
 
+void panic(const char* err) {
+    fputs(err, stderr);
+    fputc('\n', stderr);
+    exit(EXIT_FAILURE);
+}
+
 int main(int argc, char* argv[]) {
     /* Default config. */
     struct win_info wi = {
+        .title=  title,
         .width=  width,
         .height= height,
         .bpp=    bpp,
@@ -92,13 +99,35 @@ int main(int argc, char* argv[]) {
 
     /* Init. */
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_WM_SetCaption(title, NULL);
+    SDL_Window* window = SDL_CreateWindow(wi.title,
+            SDL_WINDOWPOS_UNDEFINED,
+            SDL_WINDOWPOS_UNDEFINED,
+            wi.width, wi.height,
+            SDL_WINDOW_OPENGL);
+    if (!window) {
+        panic("Error: SDL can't open a window.");
+    }
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
+    if (!renderer) {
+        panic("Error: SDL can't create a renderer.");
+    }
+    SDL_Texture* texture = SDL_CreateTexture(renderer,
+            SDL_PIXELFORMAT_ARGB8888,
+            SDL_TEXTUREACCESS_STREAMING,
+            wi.width, wi.height);
+    if (!texture) {
+        panic("Error: SDL can't create a texture.");
+    }
+
 
     struct frame fm = fi.default_frame;
     fm.ratio = (double)(width)/height;
     frame_set_ymax(&fm);
 
     struct fractal* f = fractal_create(wi, fi);
+    if (!f) {
+        panic("Error: can't create fractal.");
+    }
 
     /* Main loop. */
     bool quit = false;
@@ -110,7 +139,12 @@ int main(int argc, char* argv[]) {
         /* Display */
         if(update && !quit) {
             fractal_update(f, &fm);
-            fractal_display(f);
+            Uint32* pixels = (Uint32*) fractal_get_pixels(f);
+            SDL_UpdateTexture(texture, NULL, pixels, wi.width * sizeof(Uint32));
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            SDL_RenderClear(renderer);
+            SDL_RenderCopy(renderer, texture, NULL, NULL);
+            SDL_RenderPresent(renderer);
         }
 
         update = true;

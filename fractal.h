@@ -1,9 +1,12 @@
 #ifndef H_FRACTAL
 #define H_FRACTAL
 
+#include <stdint.h>
+
 #include "frame.h"
 
 struct win_info {
+    char* title;
     int width;
     int height;
     int bpp;
@@ -22,8 +25,8 @@ struct fractal;
 struct fractal* fractal_create(struct win_info, struct fractal_info);
 void fractal_destroy(struct fractal*);
 void fractal_clear(struct fractal*);
-void fractal_display(struct fractal*);
 void fractal_update(struct fractal*, struct frame*);
+const uint32_t* fractal_get_pixels(struct fractal* f);
 
 void fractal_max_iter_incr(struct fractal*, unsigned long step);
 void fractal_max_iter_decr(struct fractal*, unsigned long step);

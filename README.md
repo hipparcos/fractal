@@ -1,6 +1,6 @@
 # fractal
 
-A simple fractal drawer using SDL.
+A simple fractal drawer written in C (C11 revision) using SDL2.
 
 ## Getting started
 
@@ -11,7 +11,7 @@ Building:
 - GNU Compiler Collection (gcc);
 - GNU Make (make);
 - GNU C Library (glibc/getopt): CLI flags parsing;
-- SDL: rendering.
+- SDL2: rendering.
 
 Testing:
 
