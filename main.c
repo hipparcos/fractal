@@ -5,33 +5,32 @@
 #include <limits.h>
 #include <popt.h>
 
-#include "fractal.h"
-#include "generator/mandelbrot.h"
-#include "generator/julia.h"
+#include "renderer_software.h"
+#include "panic.h"
+#include "types.h"
 
-static char*  title      = "fractal";
-static int    width      = 800;
-static int    height     = 600;
-static int    bpp        = 32;
-static double zoom       = 1.1;
-static double translate  = 0.25;
-static int    max_iter   = 50;
+/* CLI arguments default. */
+static char*  title     = "fractal";
+static int    width     = 800;
+static int    height    = 600;
+static double zoom      = 1.1;
+static double translate = 0.25;
+static unsigned long max_iter = 50;
 
-static struct frame frm_mandelbrot = {
-    .xmin= -2.1,
-    .xmax=  0.7,
-    .ymin= -1.05,
-};
-static struct frame frm_julia = {
-    .xmin= -1.7,
-    .xmax=  1.7,
-    .ymin= -1.25,
-};
+void max_iter_incr(unsigned long* max_iter, unsigned long step) {
+    if (*max_iter > ULONG_MAX - step) {
+        *max_iter = ULONG_MAX;
+    } else {
+        *max_iter += step;
+    }
+}
 
-void panic(const char* err) {
-    fputs(err, stderr);
-    fputc('\n', stderr);
-    exit(EXIT_FAILURE);
+void max_iter_decr(unsigned long* max_iter, unsigned long step) {
+    if (*max_iter < step) {
+        *max_iter = 0;
+    } else {
+        *max_iter -= step;
+    }
 }
 
 #define LENGTH(arr) sizeof(arr)/sizeof(arr[0])
@@ -42,21 +41,29 @@ int main(int argc, char* argv[]) {
         .title=  title,
         .width=  width,
         .height= height,
-        .bpp=    bpp,
     };
     struct fractal_info fi[] = {
         {
-            .generator=     mandelbrot,
-            .default_frame= frm_mandelbrot,
-            .max_iter=      max_iter,
+            .generator= GEN_MANDELBROT,
+            .xmin= -2.1,
+            .xmax=  0.7,
+            .ymin= -1.05,
         },
         {
-            .generator=     julia,
-            .default_frame= frm_julia,
-            .max_iter=      max_iter,
+            .generator= GEN_JULIA,
+            .xmin= -1.7,
+            .xmax=  1.7,
+            .ymin= -1.25,
         },
     };
     size_t ifi = 0;
+    /* Init renderer to software renderer. */
+    struct renderer renderer = {0};
+    renderer.set_generator   = rdr_sw_set_generator;
+    renderer.set_frame       = rdr_sw_set_frame;
+    renderer.translate       = rdr_sw_translate;
+    renderer.zoom            = rdr_sw_zoom;
+    renderer.render          = rdr_sw_render;
 
     /* CLI arguments. */
     struct poptOption optionsTable[] = {
@@ -105,11 +112,6 @@ int main(int argc, char* argv[]) {
     }
     poptFreeContext(optCon);
 
-    /* Set max_iter in fi. */
-    for (size_t i = 0; i < LENGTH(fi); i++) {
-        fi[i].max_iter = max_iter;
-    }
-
     /* Init. */
     SDL_Init(SDL_INIT_VIDEO);
     SDL_Window* window = SDL_CreateWindow(wi.title,
@@ -120,27 +122,8 @@ int main(int argc, char* argv[]) {
     if (!window) {
         panic("Error: SDL can't open a window.");
     }
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
-    if (!renderer) {
-        panic("Error: SDL can't create a renderer.");
-    }
-    SDL_Texture* texture = SDL_CreateTexture(renderer,
-            SDL_PIXELFORMAT_ARGB8888,
-            SDL_TEXTUREACCESS_STREAMING,
-            wi.width, wi.height);
-    if (!texture) {
-        panic("Error: SDL can't create a texture.");
-    }
 
-
-    struct frame fm = fi[ifi].default_frame;
-    fm.ratio = (double)(width)/height;
-    frame_set_ymax(&fm);
-
-    struct fractal* f = fractal_create(wi, fi[ifi]);
-    if (!f) {
-        panic("Error: can't create fractal.");
-    }
+    rdr_sw_init(window, fi[ifi]);
 
     /* Main loop. */
     bool quit = false;
@@ -150,14 +133,8 @@ int main(int argc, char* argv[]) {
 
     while(!quit) {
         /* Display */
-        if(update && !quit) {
-            fractal_update(f, &fm);
-            Uint32* pixels = (Uint32*) fractal_get_pixels(f);
-            SDL_UpdateTexture(texture, NULL, pixels, wi.width * sizeof(Uint32));
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-            SDL_RenderClear(renderer);
-            SDL_RenderCopy(renderer, texture, NULL, NULL);
-            SDL_RenderPresent(renderer);
+        if (update) {
+            renderer.render(max_iter);
         }
 
         update = true;
@@ -180,16 +157,16 @@ int main(int argc, char* argv[]) {
                 break;
 
             case SDLK_UP:
-                frame_translate(&fm, .0, -(frame_height(&fm) * translate));
+                renderer.translate(0, -translate);
                 break;
             case SDLK_DOWN:
-                frame_translate(&fm, .0, frame_height(&fm) * translate);
+                renderer.translate(0,  translate);
                 break;
             case SDLK_RIGHT:
-                frame_translate(&fm, frame_width(&fm) * translate, .0);
+                renderer.translate( translate, 0);
                 break;
             case SDLK_LEFT:
-                frame_translate(&fm, -(frame_width(&fm) * translate), .0);
+                renderer.translate(-translate, 0);
                 break;
 
             case SDLK_p:
@@ -197,9 +174,9 @@ int main(int argc, char* argv[]) {
             case SDLK_KP_PLUS:
                 if((event.key.keysym.mod & KMOD_LCTRL) == KMOD_LCTRL ||
                         (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
-                    frame_zoom(&fm, zoom);
+                    renderer.zoom(zoom);
                 } else {
-                    fractal_max_iter_incr(f, 10);
+                    max_iter_incr(&max_iter, 10);
                 }
                 break;
             case SDLK_m:
@@ -207,9 +184,9 @@ int main(int argc, char* argv[]) {
             case SDLK_KP_MINUS:
                 if((event.key.keysym.mod & KMOD_LCTRL) == KMOD_LCTRL ||
                         (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
-                    frame_zoom(&fm, -zoom);
+                    renderer.zoom(1/zoom);
                 } else {
-                    fractal_max_iter_decr(f, 10);
+                    max_iter_decr(&max_iter, 10);
                 }
                 break;
 
@@ -219,9 +196,8 @@ int main(int argc, char* argv[]) {
                 ifi %= LENGTH(fi);
             /* Reset. */
             case SDLK_r:
-                frame_copy(&fm, &fi[ifi].default_frame);
-                fractal_set_generator(f, fi[ifi].generator);
-                fractal_set_max_iter(f, fi[ifi].max_iter);
+                renderer.set_frame(fi[ifi].xmin, fi[ifi].xmax, fi[ifi].ymin);
+                renderer.set_generator(fi[ifi].generator);
                 break;
 
             default:
@@ -247,19 +223,19 @@ int main(int argc, char* argv[]) {
                 mbry = event.button.y;
 
                 if(mbrx != mbpx && mbry != mbpy) {
-                    double xmax,xmin,ymin;
-
-                    if(mbrx > mbpx) {
-                        xmin = frame_globalx_to_localx(&fm, mbpx, wi.width);
-                        xmax = frame_globalx_to_localx(&fm, mbrx, wi.width);
-                    } else {
-                        xmin = frame_globalx_to_localx(&fm, mbrx, wi.width);
-                        xmax = frame_globalx_to_localx(&fm, mbpx, wi.width);
-                    }
-
-                    ymin = frame_globaly_to_localy(&fm, mbpy, wi.height);
-
-                    frame_set(&fm, xmin, xmax, ymin);
+                    /* Center the view... */
+                    int center_x = wi.width / 2;
+                    int center_y = wi.height / 2;
+                    int new_center_x = (mbrx + mbpx) / 2;
+                    int new_center_y = (mbry + mbpy) / 2;
+                    double tx = ((double)(new_center_x) - center_x) / wi.width;
+                    double ty = ((double)(new_center_y) - center_y) / wi.height;
+                    renderer.translate(tx, ty);
+                    /* ...then zoom in. */
+                    double fx = wi.width / (double)abs(mbrx - mbpx);
+                    double fy = wi.height / (double)abs(mbry - mbpy);
+                    double fc = (fx < fy) ? fx : fy;
+                    renderer.zoom(fc);
                 }
                 break;
             }
@@ -272,7 +248,7 @@ int main(int argc, char* argv[]) {
     }
 
     /* Deinit. */
-    fractal_destroy(f);
+    rdr_sw_free();
     SDL_Quit();
 
     return EXIT_SUCCESS;

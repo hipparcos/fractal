@@ -44,16 +44,16 @@ void frame_translate(struct frame* fm, double x, double y) {
 }
 
 void frame_zoom(struct frame* fm, double factor) {
-    if(fpclassify(factor) != FP_NORMAL) {
+    if(fpclassify(factor) != FP_NORMAL || factor < .001) {
         return;
     }
 
-    double xmax, xmin, ymin;
-    double z = (1 - ((factor > .0) ? 1/factor : -factor)) / 2;
+    double xmax, xmin, ymin, fc;
+    fc = (1 - 1/factor) / 2;
 
-    xmin = fm->xmin + frame_width(fm) * z;
-    xmax = fm->xmax - frame_width(fm) * z;
-    ymin = fm->ymin + frame_height(fm) * z;
+    xmin = fm->xmin + frame_width(fm) * fc;
+    xmax = fm->xmax - frame_width(fm) * fc;
+    ymin = fm->ymin + frame_height(fm) * fc;
 
     frame_set(fm, xmin, xmax, ymin);
 }
