@@ -43,4 +43,5 @@ m or -        max iterations per pixel - 10 (depth)
 CTRL+`+`      zoom+ x1.1
 CTRL+`-`      zoom- x1.1
 click + drag  zoom (box)
+Middle + drag move
 ```

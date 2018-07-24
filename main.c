@@ -209,6 +209,7 @@ int main(int argc, char* argv[]) {
         case SDL_MOUSEBUTTONDOWN:
             switch(event.button.button) {
             case SDL_BUTTON_LEFT:
+            case SDL_BUTTON_MIDDLE:
                 mbpx = event.button.x;
                 mbpy = event.button.y;
                 update = false;
@@ -218,6 +219,7 @@ int main(int argc, char* argv[]) {
 
         case SDL_MOUSEBUTTONUP:
             switch(event.button.button) {
+            /* Zoom (box). */
             case SDL_BUTTON_LEFT:
                 mbrx = event.button.x;
                 mbry = event.button.y;
@@ -238,6 +240,15 @@ int main(int argc, char* argv[]) {
                     renderer.zoom(fc);
                 }
                 break;
+            /* Translation. */
+            case SDL_BUTTON_MIDDLE:
+                mbrx = event.button.x;
+                mbry = event.button.y;
+                int dx = mbrx - mbpx;
+                int dy = mbry - mbpy;
+                double tx = (double)(dx) / wi.width;
+                double ty = (double)(dy) / wi.height;
+                renderer.translate(tx, ty);
             }
             break;
 
