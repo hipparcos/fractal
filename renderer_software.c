@@ -92,10 +92,13 @@ void rdr_sw_translate(double dx, double dy) {
     double lx = dx * frame_width(&fractal.frame);
     double ly = dy * frame_height(&fractal.frame);
     frame_translate(&fractal.frame, lx, ly);
+    fractal.cx = (fractal.frame.xmax + fractal.frame.xmin) / 2;
+    fractal.cy = (fractal.frame.ymax + fractal.frame.ymin) / 2;
 }
 
 void rdr_sw_zoom(double factor) {
     frame_zoom(&fractal.frame, factor);
+    fractal.dpp = (fractal.frame.xmax - fractal.frame.xmin) / fractal.buffer->w;
 }
 
 void rdr_sw_resize(int width, int height) {
