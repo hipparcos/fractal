@@ -37,11 +37,6 @@ void max_iter_decr(unsigned long* max_iter, unsigned long step) {
 
 int main(int argc, char* argv[]) {
     /* Default config. */
-    struct win_info wi = {
-        .title=  title,
-        .width=  width,
-        .height= height,
-    };
     struct fractal_info fi[] = {
         {
             .generator= GEN_MANDELBROT,
@@ -68,9 +63,9 @@ int main(int argc, char* argv[]) {
     /* CLI arguments. */
     struct poptOption optionsTable[] = {
         {"width", 'w', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
-            &wi.width, 0, "Set window width", NULL},
+            &width, 0, "Set window width", NULL},
         {"height", 'h', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
-            &wi.height, 0, "Set window height", NULL},
+            &height, 0, "Set window height", NULL},
         {"zoom", 'z', POPT_ARG_DOUBLE|POPT_ARGFLAG_SHOW_DEFAULT,
             &zoom, 0, "Set zoom factor based on screen size", NULL},
         {"translate", 't', POPT_ARG_DOUBLE|POPT_ARGFLAG_SHOW_DEFAULT,
@@ -114,10 +109,10 @@ int main(int argc, char* argv[]) {
 
     /* Init. */
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window* window = SDL_CreateWindow(wi.title,
+    SDL_Window* window = SDL_CreateWindow(title,
             SDL_WINDOWPOS_UNDEFINED,
             SDL_WINDOWPOS_UNDEFINED,
-            wi.width, wi.height,
+            width, height,
             SDL_WINDOW_OPENGL);
     if (!window) {
         panic("Error: SDL can't open a window.");
@@ -226,16 +221,16 @@ int main(int argc, char* argv[]) {
 
                 if(mbrx != mbpx && mbry != mbpy) {
                     /* Center the view... */
-                    int center_x = wi.width / 2;
-                    int center_y = wi.height / 2;
+                    int center_x = width / 2;
+                    int center_y = height / 2;
                     int new_center_x = (mbrx + mbpx) / 2;
                     int new_center_y = (mbry + mbpy) / 2;
-                    double tx = ((double)(new_center_x) - center_x) / wi.width;
-                    double ty = ((double)(new_center_y) - center_y) / wi.height;
+                    double tx = ((double)(new_center_x) - center_x) / width;
+                    double ty = ((double)(new_center_y) - center_y) / height;
                     renderer.translate(tx, ty);
                     /* ...then zoom in. */
-                    double fx = wi.width / (double)abs(mbrx - mbpx);
-                    double fy = wi.height / (double)abs(mbry - mbpy);
+                    double fx = width / (double)abs(mbrx - mbpx);
+                    double fy = height / (double)abs(mbry - mbpy);
                     double fc = (fx < fy) ? fx : fy;
                     renderer.zoom(fc);
                 }
@@ -246,8 +241,8 @@ int main(int argc, char* argv[]) {
                 mbry = event.button.y;
                 int dx = mbrx - mbpx;
                 int dy = mbry - mbpy;
-                double tx = (double)(dx) / wi.width;
-                double ty = (double)(dy) / wi.height;
+                double tx = (double)(dx) / width;
+                double ty = (double)(dy) / height;
                 renderer.translate(tx, ty);
             }
             break;

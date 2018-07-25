@@ -1,12 +1,6 @@
 #ifndef _H_TYPES_
 #define _H_TYPES_
 
-struct win_info {
-    char* title;
-    int width;
-    int height;
-};
-
 enum generator {
     GEN_MANDELBROT,
     GEN_JULIA,
