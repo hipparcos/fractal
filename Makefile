@@ -1,5 +1,5 @@
 out=fractal
-sources=main.c frame.c panic.c renderer_software.c generator/julia.c generator/mandelbrot.c
+sources=main.c panic.c renderer_software.c generator/julia.c generator/mandelbrot.c
 build_dir:=build
 
 objects=$(addprefix $(build_dir)/,$(sources:%.c=%.o))
