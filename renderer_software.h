@@ -11,7 +11,8 @@ void rdr_sw_free(void);
 
 /* renderer interface */
 void rdr_sw_set_generator(enum generator gen);
-void rdr_sw_set_frame(double xmin, double xmax, double ymin);
+void rdr_sw_set_center(double cx, double cy);
+void rdr_sw_set_dpp(double dpp);
 void rdr_sw_translate(double dx, double dy);
 void rdr_sw_zoom(double factor);
 void rdr_sw_render(unsigned long max_iter);

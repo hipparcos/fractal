@@ -40,22 +40,23 @@ int main(int argc, char* argv[]) {
     struct fractal_info fi[] = {
         {
             .generator= GEN_MANDELBROT,
-            .xmin= -2.1,
-            .xmax=  0.7,
-            .ymin= -1.05,
+            .cx=  -0.7,
+            .cy=   0.0,
+            .dpp=  0.0035,
         },
         {
             .generator= GEN_JULIA,
-            .xmin= -1.7,
-            .xmax=  1.7,
-            .ymin= -1.25,
+            .cx=   0.0,
+            .cy=   0.0,
+            .dpp=  0.00425,
         },
     };
     size_t ifi = 0;
     /* Init renderer to software renderer. */
     struct renderer renderer = {0};
     renderer.set_generator   = rdr_sw_set_generator;
-    renderer.set_frame       = rdr_sw_set_frame;
+    renderer.set_center      = rdr_sw_set_center;
+    renderer.set_dpp         = rdr_sw_set_dpp;
     renderer.translate       = rdr_sw_translate;
     renderer.zoom            = rdr_sw_zoom;
     renderer.render          = rdr_sw_render;
@@ -191,7 +192,8 @@ int main(int argc, char* argv[]) {
                 ifi %= LENGTH(fi);
             /* Reset. */
             case SDLK_r:
-                renderer.set_frame(fi[ifi].xmin, fi[ifi].xmax, fi[ifi].ymin);
+                renderer.set_center(fi[ifi].cx, fi[ifi].cy);
+                renderer.set_dpp(fi[ifi].dpp);
                 renderer.set_generator(fi[ifi].generator);
                 break;
 

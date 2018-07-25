@@ -13,13 +13,17 @@
 
 typedef unsigned long (*fractal_generator)(double lx, double ly, unsigned long max_iter);
 
-struct {
+static struct {
     SDL_Renderer* renderer;
     SDL_Texture* texture;
     SDL_Surface* buffer;
     fractal_generator generator;
     struct frame frame;
-} fractal;
+    double cx, cy;
+    double dpp;
+} fractal = {
+    .cx= .0, .cy= .0, .dpp= 0.01, // default values.
+};
 
 void rdr_sw_init(SDL_Window* window, struct fractal_info fi) {
     int width, height;
@@ -43,7 +47,8 @@ void rdr_sw_init(SDL_Window* window, struct fractal_info fi) {
         panic("Error: SDL can't create a texture.");
     }
     rdr_sw_set_generator(fi.generator);
-    rdr_sw_set_frame(fi.xmin, fi.xmax, fi.ymin);
+    rdr_sw_set_center(fi.cx, fi.cy);
+    rdr_sw_set_dpp(fi.dpp);
 }
 
 void rdr_sw_free(void) {
@@ -71,9 +76,28 @@ void rdr_sw_set_generator(enum generator gen) {
     }
 }
 
-void rdr_sw_set_frame(double xmin, double xmax, double ymin) {
-    fractal.frame.ratio = (double)(fractal.buffer->w) / fractal.buffer->h;
+static void rdr_sw_set_frame() {
+    int width = fractal.buffer->w;
+    int height = fractal.buffer->h;
+    fractal.frame.ratio = (double)(width) / height;
+    // Get boundaries from center & dpp.
+    double xmin, xmax, ymin;
+    xmin = fractal.cx - fractal.dpp * width/2;
+    xmax = fractal.cx + fractal.dpp * width/2;
+    ymin = fractal.cy - fractal.dpp * height/2;
+    // Init frame & set ymax.
     frame_set(&fractal.frame, xmin, xmax, ymin);
+}
+
+void rdr_sw_set_center(double cx, double cy) {
+    fractal.cx = cx;
+    fractal.cy = cy;
+    rdr_sw_set_frame();
+}
+
+void rdr_sw_set_dpp(double dpp) {
+    fractal.dpp = dpp;
+    rdr_sw_set_frame();
 }
 
 void rdr_sw_translate(double dx, double dy) {
