@@ -29,6 +29,8 @@ struct renderer {
     void (*translate)(double dx, double dy);
     /** zoom zooms on view. factor > 1 means zooming in, factor < 1 means zooming out. */
     void (*zoom)(double factor);
+    /** resize resizes the view. width,height are in pixels. */
+    void (*resize)(int width, int height);
     /** render renders the fractal to the screen. max_iter is the limit of iterations done per pixel. */
     void (*render)(unsigned long max_iter);
 };

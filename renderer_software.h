@@ -15,6 +15,7 @@ void rdr_sw_set_center(double cx, double cy);
 void rdr_sw_set_dpp(double dpp);
 void rdr_sw_translate(double dx, double dy);
 void rdr_sw_zoom(double factor);
+void rdr_sw_resize(int width, int height);
 void rdr_sw_render(unsigned long max_iter);
 
 #endif

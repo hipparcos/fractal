@@ -33,19 +33,7 @@ void rdr_sw_init(SDL_Window* window, struct fractal_info fi) {
         rdr_sw_free();
         panic("Error: SDL can't create a renderer.");
     }
-    fractal.texture = SDL_CreateTexture(fractal.renderer,
-            SDL_PIXELFORMAT_ARGB8888,
-            SDL_TEXTUREACCESS_STREAMING,
-           width, height);
-    if (!fractal.texture) {
-        rdr_sw_free();
-        panic("Error: SDL can't create a texture.");
-    }
-    fractal.buffer = SDL_CreateRGBSurface(0, width, height, BPP, 0, 0, 0, 0);
-    if (!fractal.buffer) {
-        rdr_sw_free();
-        panic("Error: SDL can't create a texture.");
-    }
+    rdr_sw_resize(width, height);
     rdr_sw_set_generator(fi.generator);
     rdr_sw_set_center(fi.cx, fi.cy);
     rdr_sw_set_dpp(fi.dpp);
@@ -108,6 +96,31 @@ void rdr_sw_translate(double dx, double dy) {
 
 void rdr_sw_zoom(double factor) {
     frame_zoom(&fractal.frame, factor);
+}
+
+void rdr_sw_resize(int width, int height) {
+    /* New texture. */
+    if (fractal.texture) {
+        SDL_DestroyTexture(fractal.texture);
+    }
+    fractal.texture = SDL_CreateTexture(fractal.renderer,
+            SDL_PIXELFORMAT_ARGB8888,
+            SDL_TEXTUREACCESS_STREAMING,
+           width, height);
+    if (!fractal.texture) {
+        rdr_sw_free();
+        panic("Error: SDL can't create a texture.");
+    }
+    /* New surface. */
+    if (fractal.buffer) {
+        SDL_FreeSurface(fractal.buffer);
+    }
+    fractal.buffer = SDL_CreateRGBSurface(0, width, height, BPP, 0, 0, 0, 0);
+    if (!fractal.buffer) {
+        rdr_sw_free();
+        panic("Error: SDL can't create a surface.");
+    }
+    rdr_sw_set_frame();
 }
 
 static void rdr_sw_update(unsigned long max_iter) {

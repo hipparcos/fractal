@@ -59,6 +59,7 @@ int main(int argc, char* argv[]) {
     renderer.set_dpp         = rdr_sw_set_dpp;
     renderer.translate       = rdr_sw_translate;
     renderer.zoom            = rdr_sw_zoom;
+    renderer.resize          = rdr_sw_resize;
     renderer.render          = rdr_sw_render;
 
     /* CLI arguments. */
@@ -114,7 +115,7 @@ int main(int argc, char* argv[]) {
             SDL_WINDOWPOS_UNDEFINED,
             SDL_WINDOWPOS_UNDEFINED,
             width, height,
-            SDL_WINDOW_OPENGL);
+            SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
     if (!window) {
         panic("Error: SDL can't open a window.");
     }
@@ -140,6 +141,15 @@ int main(int argc, char* argv[]) {
         switch(event.type) {
         case SDL_QUIT:
             quit = true;
+            break;
+
+        case SDL_WINDOWEVENT:
+            switch (event.window.event) {
+                case SDL_WINDOWEVENT_SIZE_CHANGED:
+                    SDL_GetWindowSize(window, &width, &height);
+                    renderer.resize(width, height);
+                    break;
+            }
             break;
 
         case SDL_KEYDOWN:
