@@ -6,6 +6,7 @@
 #include <popt.h>
 
 #include "renderer_software.h"
+#include "renderer_hardware.h"
 #include "panic.h"
 #include "types.h"
 
@@ -15,6 +16,7 @@ static int    width     = 800;
 static int    height    = 600;
 static double zoom      = 1.1;
 static double translate = 0.25;
+static int    software  = 1;
 static unsigned long max_iter = 50;
 
 void max_iter_incr(unsigned long* max_iter, unsigned long step) {
@@ -52,15 +54,6 @@ int main(int argc, char* argv[]) {
         },
     };
     size_t ifi = 0;
-    /* Init renderer to software renderer. */
-    struct renderer renderer = {0};
-    renderer.set_generator   = rdr_sw_set_generator;
-    renderer.set_center      = rdr_sw_set_center;
-    renderer.set_dpp         = rdr_sw_set_dpp;
-    renderer.translate       = rdr_sw_translate;
-    renderer.zoom            = rdr_sw_zoom;
-    renderer.resize          = rdr_sw_resize;
-    renderer.render          = rdr_sw_render;
 
     /* CLI arguments. */
     struct poptOption optionsTable[] = {
@@ -76,6 +69,8 @@ int main(int argc, char* argv[]) {
             &max_iter, 0, "Set max iteration limit", NULL},
         {"generator", 'g', POPT_ARG_STRING|POPT_ARGFLAG_SHOW_DEFAULT,
             NULL, 'g', "Set fractal generator", "mandelbrot|julia"},
+        {"software", 's', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
+            &software, 0, "Use software renderer", NULL},
         POPT_AUTOHELP
         POPT_TABLEEND
     };
@@ -109,6 +104,26 @@ int main(int argc, char* argv[]) {
     }
     poptFreeContext(optCon);
 
+    /* Select renderer. */
+    struct renderer renderer = {0};
+    if (software) {
+        renderer.set_generator   = rdr_sw_set_generator;
+        renderer.set_center      = rdr_sw_set_center;
+        renderer.set_dpp         = rdr_sw_set_dpp;
+        renderer.translate       = rdr_sw_translate;
+        renderer.zoom            = rdr_sw_zoom;
+        renderer.resize          = rdr_sw_resize;
+        renderer.render          = rdr_sw_render;
+    } else {
+        renderer.set_generator   = rdr_hw_set_generator;
+        renderer.set_center      = rdr_hw_set_center;
+        renderer.set_dpp         = rdr_hw_set_dpp;
+        renderer.translate       = rdr_hw_translate;
+        renderer.zoom            = rdr_hw_zoom;
+        renderer.resize          = rdr_hw_resize;
+        renderer.render          = rdr_hw_render;
+    }
+
     /* Init. */
     SDL_Init(SDL_INIT_VIDEO);
     SDL_Window* window = SDL_CreateWindow(title,
@@ -120,7 +135,11 @@ int main(int argc, char* argv[]) {
         panic("Error: SDL can't open a window.");
     }
 
-    rdr_sw_init(window, fi[ifi]);
+    if (software) {
+        rdr_sw_init(window, fi[ifi]);
+    } else {
+        rdr_hw_init(window, fi[ifi]);
+    }
 
     /* Main loop. */
     bool quit = false;
@@ -266,7 +285,12 @@ int main(int argc, char* argv[]) {
     }
 
     /* Deinit. */
-    rdr_sw_free();
+    if (software) {
+        rdr_sw_free();
+    } else {
+        rdr_hw_free();
+    }
+    SDL_DestroyWindow(window);
     SDL_Quit();
 
     return EXIT_SUCCESS;
