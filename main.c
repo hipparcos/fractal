@@ -18,6 +18,7 @@ static double zoomf      = 1.1;
 static double translatef = 0.25;
 static int    software   = 0;
 static int    max_iter   = 50;
+static int    step       = 10;
 static enum generator generator = GEN_MANDELBROT;
 
 #define LENGTH(arr) sizeof(arr)/sizeof(arr[0])
@@ -53,8 +54,10 @@ int main(int argc, char* argv[]) {
             &translatef, 0, "Set translation factor based on screen size", NULL},
         {"iter", 'i', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
             &max_iter, 0, "Set max iteration limit", NULL},
-        {"generator", 'g', POPT_ARG_STRING|POPT_ARGFLAG_SHOW_DEFAULT,
-            NULL, 'g', "Set fractal generator", "mandelbrot|julia"},
+        {"step", '\0', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
+            &step, 0, "Set max iteration (incr|decr)ementation step", NULL},
+        {"generator", 'g', POPT_ARG_STRING,
+            NULL, 'g', "Set fractal generator (default: mandelbrot)", "mandelbrot|julia"},
         {"software", 's', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
             &software, 0, "Use software renderer (hardware renderer by default)", "0|1"},
         POPT_AUTOHELP
@@ -177,7 +180,7 @@ int main(int argc, char* argv[]) {
                         (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
                     fi_zoom(&fractal, zoomf);
                 } else {
-                    fi_max_iter_incr(&fractal, 10);
+                    fi_max_iter_incr(&fractal, step);
                 }
                 break;
             case SDLK_m:
@@ -187,7 +190,7 @@ int main(int argc, char* argv[]) {
                         (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
                     fi_zoom(&fractal, 1/zoomf);
                 } else {
-                    fi_max_iter_decr(&fractal, 10);
+                    fi_max_iter_decr(&fractal, step);
                 }
                 break;
 
