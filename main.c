@@ -20,36 +20,6 @@ static int    software   = 1;
 static int    max_iter   = 50;
 static enum generator generator = GEN_MANDELBROT;
 
-void max_iter_incr(struct fractal_info* fi, int step) {
-    if (fi->max_iter > INT_MAX - step) {
-        fi->max_iter = INT_MAX;
-    } else {
-        fi->max_iter += step;
-    }
-}
-
-void max_iter_decr(struct fractal_info* fi, int step) {
-    if (fi->max_iter < step) {
-        fi->max_iter = 0;
-    } else {
-        fi->max_iter -= step;
-    }
-}
-
-void translate(struct fractal_info* fi, SDL_Window* window, double dx, double dy) {
-    int width, height;
-    SDL_GetWindowSize(window, &width, &height);
-    fi->cx += dx * width * fi->dpp;
-    fi->cy -= dy * height * fi->dpp;
-}
-
-void zoom(struct fractal_info* fi, double factor) {
-    if (factor < 0.001) {
-        return;
-    }
-    fi->dpp *= 1/factor;
-}
-
 #define LENGTH(arr) sizeof(arr)/sizeof(arr[0])
 
 int main(int argc, char* argv[]) {
@@ -120,6 +90,7 @@ int main(int argc, char* argv[]) {
     }
     poptFreeContext(optCon);
 
+    /* Set max_iter for all fractals from CLI argument. */
     for (size_t i = 0; i < LENGTH(fractals); i++) {
         fractals[i].max_iter = max_iter;
     }
@@ -187,16 +158,16 @@ int main(int argc, char* argv[]) {
                 break;
 
             case SDLK_UP:
-                translate(&fractal, window, 0,  translatef);
+                fi_translate(&fractal, window, 0,  translatef);
                 break;
             case SDLK_DOWN:
-                translate(&fractal, window, 0, -translatef);
+                fi_translate(&fractal, window, 0, -translatef);
                 break;
             case SDLK_RIGHT:
-                translate(&fractal, window,  translatef, 0);
+                fi_translate(&fractal, window,  translatef, 0);
                 break;
             case SDLK_LEFT:
-                translate(&fractal, window, -translatef, 0);
+                fi_translate(&fractal, window, -translatef, 0);
                 break;
 
             case SDLK_p:
@@ -204,9 +175,9 @@ int main(int argc, char* argv[]) {
             case SDLK_KP_PLUS:
                 if((event.key.keysym.mod & KMOD_LCTRL) == KMOD_LCTRL ||
                         (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
-                    zoom(&fractal, zoomf);
+                    fi_zoom(&fractal, zoomf);
                 } else {
-                    max_iter_incr(&fractal, 10);
+                    fi_max_iter_incr(&fractal, 10);
                 }
                 break;
             case SDLK_m:
@@ -214,9 +185,9 @@ int main(int argc, char* argv[]) {
             case SDLK_KP_MINUS:
                 if((event.key.keysym.mod & KMOD_LCTRL) == KMOD_LCTRL ||
                         (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
-                    zoom(&fractal, 1/zoomf);
+                    fi_zoom(&fractal, 1/zoomf);
                 } else {
-                    max_iter_decr(&fractal, 10);
+                    fi_max_iter_decr(&fractal, 10);
                 }
                 break;
 
@@ -261,12 +232,12 @@ int main(int argc, char* argv[]) {
                     int new_center_y = (mbry + mbpy) / 2;
                     double tx = ((double)(new_center_x) - center_x) / width;
                     double ty = ((double)(new_center_y) - center_y) / height;
-                    translate(&fractal, window, tx, -ty);
+                    fi_translate(&fractal, window, tx, -ty);
                     /* ...then zoom in. */
                     double fx = width / (double)abs(mbrx - mbpx);
                     double fy = height / (double)abs(mbry - mbpy);
                     double fc = (fx < fy) ? fx : fy;
-                    zoom(&fractal, fc);
+                    fi_zoom(&fractal, fc);
                 }
                 break;
             /* Translation. */
@@ -277,7 +248,7 @@ int main(int argc, char* argv[]) {
                 int dy = mbry - mbpy;
                 double tx = (double)(dx) / width;
                 double ty = (double)(dy) / height;
-                translate(&fractal, window, tx, -ty);
+                fi_translate(&fractal, window, tx, -ty);
             }
             break;
 
