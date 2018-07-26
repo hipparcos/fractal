@@ -1,7 +1,7 @@
 #include "mandelbrot.h"
 
-unsigned long mandelbrot(double lx, double ly, unsigned long max_iter) {
-    unsigned long iter = 0;
+int mandelbrot(double lx, double ly, int max_iter) {
+    int iter = 0;
     double zrealpart = 0;
     double zimgpart = 0;
     double zmodule = 0;

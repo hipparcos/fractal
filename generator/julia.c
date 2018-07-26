@@ -5,8 +5,8 @@
 #define JULIA_C_imag 0.156
 #endif
 
-unsigned long julia(double lx, double ly, unsigned long max_iter) {
-    unsigned long iter = 0;
+int julia(double lx, double ly, int max_iter) {
+    int iter = 0;
     double zrealpart = lx;
     double zimgpart = ly;
     double zmodule = 0;

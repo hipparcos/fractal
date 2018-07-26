@@ -10,7 +10,7 @@
 
 #define BPP 32
 
-typedef unsigned long (*fractal_generator)(double lx, double ly, unsigned long max_iter);
+typedef int (*fractal_generator)(double lx, double ly, int max_iter);
 
 static struct {
     SDL_Renderer* renderer;
@@ -23,7 +23,7 @@ static struct {
     .cx= .0, .cy= .0, .dpp= 0.01, // default values.
 };
 
-void rdr_sw_init(SDL_Window* window, struct fractal_info fi) {
+void rdr_sw_init(SDL_Window* window) {
     int width, height;
     SDL_GetWindowSize(window, &width, &height);
     fractal.renderer = SDL_CreateRenderer(window, -1, 0);
@@ -32,9 +32,6 @@ void rdr_sw_init(SDL_Window* window, struct fractal_info fi) {
         panic("Error: SDL can't create a renderer.");
     }
     rdr_sw_resize(width, height);
-    rdr_sw_set_generator(fi.generator);
-    rdr_sw_set_center(fi.cx, fi.cy);
-    rdr_sw_set_dpp(fi.dpp);
 }
 
 void rdr_sw_free(void) {
@@ -50,37 +47,17 @@ void rdr_sw_free(void) {
 }
 
 /* renderer interface */
-void rdr_sw_set_generator(enum generator gen) {
+static fractal_generator rdr_sw_get_generator(enum generator gen) {
     switch (gen) {
     case GEN_JULIA:
-        fractal.generator = julia;
+        return julia;
         break;
     case GEN_MANDELBROT:
-        fractal.generator = mandelbrot;
+        return mandelbrot;
     default:
         break;
     }
-}
-
-void rdr_sw_set_center(double cx, double cy) {
-    fractal.cx = cx;
-    fractal.cy = cy;
-}
-
-void rdr_sw_set_dpp(double dpp) {
-    fractal.dpp = dpp;
-}
-
-void rdr_sw_translate(double dx, double dy) {
-    fractal.cx += dx * fractal.buffer->w * fractal.dpp;
-    fractal.cy += dy * fractal.buffer->h * fractal.dpp;
-}
-
-void rdr_sw_zoom(double factor) {
-    if (factor < 0.001) {
-        return;
-    }
-    fractal.dpp *= 1/factor;
+    return NULL;
 }
 
 void rdr_sw_resize(int width, int height) {
@@ -107,23 +84,23 @@ void rdr_sw_resize(int width, int height) {
     }
 }
 
-static void rdr_sw_update(unsigned long max_iter) {
+static void rdr_sw_update(struct fractal_info fi, fractal_generator gen) {
     SDL_FillRect(fractal.buffer, NULL, SDL_MapRGB(fractal.buffer->format, 0, 0, 0));
 
     for(int y = 0; y < fractal.buffer->h; y++) {
         for(int x = 0; x < fractal.buffer->w; x++) {
             // Calculate a pixel.
-            unsigned long iter = fractal.generator(
-                    fractal.cx + fractal.dpp * (x - fractal.buffer->w/2), // lx.
-                    fractal.cy + fractal.dpp * (y - fractal.buffer->h/2), // ly.
-                    max_iter);
+            int iter = gen(
+                    fi.cx + fi.dpp * (x - fractal.buffer->w/2), // lx.
+                    fi.cy + fi.dpp * (y - fractal.buffer->h/2), // ly.
+                    fi.max_iter);
 
-            if (iter == max_iter) {
+            if (iter == fi.max_iter) {
                 iter = 0;
             }
 
             /* Color */
-            double ratio = (double)(iter) / (double)(max_iter);
+            double ratio = (double)(iter) / (double)(fi.max_iter);
             int color = floor((double)(0xff) * ratio);
             int red   = color;
             int green = color;
@@ -139,8 +116,8 @@ static void rdr_sw_update(unsigned long max_iter) {
     SDL_UpdateTexture(fractal.texture, NULL, pixels, fractal.buffer->w * sizeof(Uint32));
 }
 
-void rdr_sw_render(unsigned long max_iter) {
-    rdr_sw_update(max_iter);
+void rdr_sw_render(struct fractal_info fi) {
+    rdr_sw_update(fi, rdr_sw_get_generator(fi.generator));
     SDL_RenderClear(fractal.renderer);
     SDL_SetRenderDrawColor(fractal.renderer, 0, 0, 0, 255);
     SDL_RenderCopy(fractal.renderer, fractal.texture, NULL, NULL);

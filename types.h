@@ -11,6 +11,8 @@ enum generator {
 /** fractal_info gathers init informations about fractal for renderers. */
 struct fractal_info {
     enum generator generator;
+    /** max_iter is the maximum number of iteration for each pixel. */
+    int max_iter;
     /** cx is the center of view x coord in local coord. */
     double cx;
     /** cy is the center of view y coord in local coord. */
@@ -22,23 +24,13 @@ struct fractal_info {
 /** renderer is the interface that all renderers must implement. */
 struct renderer {
     /** init initializes the renderer. */
-    void (*init)(SDL_Window* window, struct fractal_info fi);
+    void (*init)(SDL_Window* window);
     /** free cleans up renderer memory. */
     void (*free)(void);
-    /** set_generator tells the renderer which fractal to draw. */
-    void (*set_generator)(enum generator);
-    /** set_center centers the view on cx,cy (in local coordinates). */
-    void (*set_center)(double cx, double cy);
-    /** set_dpp sets the width of each pixel in local coordinates. */
-    void (*set_dpp)(double dpp);
-    /** translate translates the view by dx * width & dy * height. */
-    void (*translate)(double dx, double dy);
-    /** zoom zooms on view. factor > 1 means zooming in, factor < 1 means zooming out. */
-    void (*zoom)(double factor);
-    /** resize resizes the view. width,height are in pixels. */
+    /** resize resizes the renderer. */
     void (*resize)(int width, int height);
-    /** render renders the fractal to the screen. max_iter is the limit of iterations done per pixel. */
-    void (*render)(unsigned long max_iter);
+    /** render renders the fractal to the screen. */
+    void (*render)(struct fractal_info fi);
 };
 
 #endif

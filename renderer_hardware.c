@@ -33,8 +33,6 @@ static const char* vertex_shader =
 static SDL_Window* lwindow;
 static SDL_GLContext lcontext;
 static GLuint vao, vbuffer, vs, fs, program;
-double lcx = 0.0, lcy = 0.0;
-double ldpp = 0.0;
 
 /** read_file reads all content of filename at once.
  ** Caller is responsible for calling free on returned string. */
@@ -82,14 +80,10 @@ GLuint LoadShader(GLenum type, const char* name, const char *src) {
     return shader;
 }
 
-void rdr_hw_init(SDL_Window* window, struct fractal_info fi) {
+void rdr_hw_init(SDL_Window* window) {
     lwindow = window;
     int width, height;
     SDL_GetWindowSize(window, &width, &height);
-
-    lcx = fi.cx;
-    lcy = fi.cy;
-    ldpp = fi.dpp;
 
     /* OpenGL init. */
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
@@ -128,10 +122,6 @@ void rdr_hw_init(SDL_Window* window, struct fractal_info fi) {
     glEnableVertexAttribArray(attrib_position);
     glVertexAttribPointer(attrib_position, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (void*)0);
 
-    /* attrib_color = glGetAttribLocation(program, "in_color"); */
-    /* glEnableVertexAttribArray(attrib_color); */
-    /* glVertexAttribPointer(attrib_color, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(sizeof(float) * 2)); */
-
     glEnable(GL_TEXTURE_2D);
     glDisable(GL_DEPTH_TEST);
     glViewport(0, 0, width, height);
@@ -141,50 +131,29 @@ void rdr_hw_free(void) {
     SDL_GL_DeleteContext(lcontext);
 }
 
-/* renderer interface */
-void rdr_hw_set_generator(enum generator gen) {
-}
-
-void rdr_hw_set_center(double cx, double cy) {
-    lcx = cx;
-    lcy = cy;
-}
-
-void rdr_hw_set_dpp(double dpp) {
-    ldpp = dpp;
-}
-
-void rdr_hw_translate(double dx, double dy) {
-    int width, height;
-    SDL_GetWindowSize(lwindow, &width, &height);
-    lcx += dx * width * ldpp;
-    lcy -= dy * height * ldpp;
-}
-
-void rdr_hw_zoom(double factor) {
-    ldpp *= 1/factor;
-}
-
 void rdr_hw_resize(int width, int height) {
     glViewport(0, 0, width, height);
 }
 
-void rdr_hw_render(unsigned long max_iter) {
+void rdr_hw_render(struct fractal_info fi) {
+    fi.cy *= -1; // invert y coord to act like software renderer.
+
     int width, height;
     SDL_GetWindowSize(lwindow, &width, &height);
+    glViewport(0, 0, width, height);
 
     /* Update uniform variables values. */
     GLint uniform_window_size = glGetUniformLocation(program, "u_window_size");
     float size[2] = {(float)width, (float)height};
     glUniform2fv(uniform_window_size, 1, size);
     GLint uniform_center = glGetUniformLocation(program, "u_center");
-    float center[2] = {(float)lcx, (float)lcy};
+    float center[2] = {(float)fi.cx, (float)fi.cy};
     glUniform2fv(uniform_center, 1, center);
     GLint uniform_dpp = glGetUniformLocation(program, "u_dpp");
-    float dpp[1] = { (float)ldpp };
+    float dpp[1] = { (float)fi.dpp };
     glUniform1fv(uniform_dpp, 1, dpp);
     GLint uniform_max_iter = glGetUniformLocation(program,"u_max_iter");
-    int gl_max_iter[1] = { max_iter };
+    int gl_max_iter[1] = { fi.max_iter };
     glUniform1iv(uniform_max_iter, 1, gl_max_iter);
 
     glClearColor(0.0, 0.0, 0.0, 0.0);

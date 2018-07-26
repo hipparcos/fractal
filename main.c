@@ -11,49 +11,65 @@
 #include "types.h"
 
 /* CLI arguments default. */
-static char*  title     = "fractal";
-static int    width     = 800;
-static int    height    = 600;
-static double zoom      = 1.1;
-static double translate = 0.25;
-static int    software  = 1;
-static unsigned long max_iter = 50;
+static char*  title      = "fractal";
+static int    width      = 800;
+static int    height     = 600;
+static double zoomf      = 1.1;
+static double translatef = 0.25;
+static int    software   = 1;
+static int    max_iter   = 50;
+static enum generator generator = GEN_MANDELBROT;
 
-void max_iter_incr(unsigned long* max_iter, unsigned long step) {
-    if (*max_iter > ULONG_MAX - step) {
-        *max_iter = ULONG_MAX;
+void max_iter_incr(struct fractal_info* fi, int step) {
+    if (fi->max_iter > INT_MAX - step) {
+        fi->max_iter = INT_MAX;
     } else {
-        *max_iter += step;
+        fi->max_iter += step;
     }
 }
 
-void max_iter_decr(unsigned long* max_iter, unsigned long step) {
-    if (*max_iter < step) {
-        *max_iter = 0;
+void max_iter_decr(struct fractal_info* fi, int step) {
+    if (fi->max_iter < step) {
+        fi->max_iter = 0;
     } else {
-        *max_iter -= step;
+        fi->max_iter -= step;
     }
+}
+
+void translate(struct fractal_info* fi, SDL_Window* window, double dx, double dy) {
+    int width, height;
+    SDL_GetWindowSize(window, &width, &height);
+    fi->cx += dx * width * fi->dpp;
+    fi->cy -= dy * height * fi->dpp;
+}
+
+void zoom(struct fractal_info* fi, double factor) {
+    if (factor < 0.001) {
+        return;
+    }
+    fi->dpp *= 1/factor;
 }
 
 #define LENGTH(arr) sizeof(arr)/sizeof(arr[0])
 
 int main(int argc, char* argv[]) {
     /* Default config. */
-    struct fractal_info fi[] = {
+    struct fractal_info fractals[] = {
         {
             .generator= GEN_MANDELBROT,
             .cx=  -0.7,
             .cy=   0.0,
             .dpp=  0.0035,
+            .max_iter = max_iter,
         },
         {
             .generator= GEN_JULIA,
             .cx=   0.0,
             .cy=   0.0,
             .dpp=  0.00425,
+            .max_iter = max_iter,
         },
     };
-    size_t ifi = 0;
 
     /* CLI arguments. */
     struct poptOption optionsTable[] = {
@@ -62,9 +78,9 @@ int main(int argc, char* argv[]) {
         {"height", 'h', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
             &height, 0, "Set window height", NULL},
         {"zoom", 'z', POPT_ARG_DOUBLE|POPT_ARGFLAG_SHOW_DEFAULT,
-            &zoom, 0, "Set zoom factor based on screen size", NULL},
+            &zoomf, 0, "Set zoom factor based on screen size", NULL},
         {"translate", 't', POPT_ARG_DOUBLE|POPT_ARGFLAG_SHOW_DEFAULT,
-            &translate, 0, "Set translation factor based on screen size", NULL},
+            &translatef, 0, "Set translation factor based on screen size", NULL},
         {"iter", 'i', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
             &max_iter, 0, "Set max iteration limit", NULL},
         {"generator", 'g', POPT_ARG_STRING|POPT_ARGFLAG_SHOW_DEFAULT,
@@ -85,9 +101,9 @@ int main(int argc, char* argv[]) {
             case 'g':
                 gen = poptGetOptArg(optCon);
                 if (strcmp(gen, "julia") == 0) {
-                    ifi = 1;
+                    generator = GEN_JULIA;
                 } else {
-                    ifi = 0;
+                    generator = GEN_MANDELBROT;
                 }
                 break;
             default:
@@ -104,6 +120,10 @@ int main(int argc, char* argv[]) {
     }
     poptFreeContext(optCon);
 
+    for (size_t i = 0; i < LENGTH(fractals); i++) {
+        fractals[i].max_iter = max_iter;
+    }
+
     /* Select renderer. */
     struct renderer renderer;
     if (software) {
@@ -111,6 +131,8 @@ int main(int argc, char* argv[]) {
     } else {
         renderer = hw_renderer;
     }
+    /* Set fractal info. */
+    struct fractal_info fractal = fractals[generator];
 
     /* Init. */
     SDL_Init(SDL_INIT_VIDEO);
@@ -122,7 +144,7 @@ int main(int argc, char* argv[]) {
     if (!window) {
         panic("Error: SDL can't open a window.");
     }
-    renderer.init(window, fi[ifi]);
+    renderer.init(window);
 
     /* Main loop. */
     bool quit = false;
@@ -133,7 +155,7 @@ int main(int argc, char* argv[]) {
     while(!quit) {
         /* Display */
         if (update) {
-            renderer.render(max_iter);
+            renderer.render(fractal);
         }
 
         update = true;
@@ -165,16 +187,16 @@ int main(int argc, char* argv[]) {
                 break;
 
             case SDLK_UP:
-                renderer.translate(0, -translate);
+                translate(&fractal, window, 0,  translatef);
                 break;
             case SDLK_DOWN:
-                renderer.translate(0,  translate);
+                translate(&fractal, window, 0, -translatef);
                 break;
             case SDLK_RIGHT:
-                renderer.translate( translate, 0);
+                translate(&fractal, window,  translatef, 0);
                 break;
             case SDLK_LEFT:
-                renderer.translate(-translate, 0);
+                translate(&fractal, window, -translatef, 0);
                 break;
 
             case SDLK_p:
@@ -182,9 +204,9 @@ int main(int argc, char* argv[]) {
             case SDLK_KP_PLUS:
                 if((event.key.keysym.mod & KMOD_LCTRL) == KMOD_LCTRL ||
                         (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
-                    renderer.zoom(zoom);
+                    zoom(&fractal, zoomf);
                 } else {
-                    max_iter_incr(&max_iter, 10);
+                    max_iter_incr(&fractal, 10);
                 }
                 break;
             case SDLK_m:
@@ -192,21 +214,19 @@ int main(int argc, char* argv[]) {
             case SDLK_KP_MINUS:
                 if((event.key.keysym.mod & KMOD_LCTRL) == KMOD_LCTRL ||
                         (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
-                    renderer.zoom(1/zoom);
+                    zoom(&fractal, 1/zoomf);
                 } else {
-                    max_iter_decr(&max_iter, 10);
+                    max_iter_decr(&fractal, 10);
                 }
                 break;
 
             /* Switch. */
             case SDLK_s:
-                ifi += 1;
-                ifi %= LENGTH(fi);
+                generator += 1;
+                generator %= LENGTH(fractals);
             /* Reset. */
             case SDLK_r:
-                renderer.set_center(fi[ifi].cx, fi[ifi].cy);
-                renderer.set_dpp(fi[ifi].dpp);
-                renderer.set_generator(fi[ifi].generator);
+                fractal = fractals[generator];
                 break;
 
             default:
@@ -241,12 +261,12 @@ int main(int argc, char* argv[]) {
                     int new_center_y = (mbry + mbpy) / 2;
                     double tx = ((double)(new_center_x) - center_x) / width;
                     double ty = ((double)(new_center_y) - center_y) / height;
-                    renderer.translate(tx, ty);
+                    translate(&fractal, window, tx, ty);
                     /* ...then zoom in. */
                     double fx = width / (double)abs(mbrx - mbpx);
                     double fy = height / (double)abs(mbry - mbpy);
                     double fc = (fx < fy) ? fx : fy;
-                    renderer.zoom(fc);
+                    zoom(&fractal, fc);
                 }
                 break;
             /* Translation. */
@@ -257,7 +277,7 @@ int main(int argc, char* argv[]) {
                 int dy = mbry - mbpy;
                 double tx = (double)(dx) / width;
                 double ty = (double)(dy) / height;
-                renderer.translate(tx, ty);
+                translate(&fractal, window, tx, ty);
             }
             break;
 
