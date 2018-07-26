@@ -130,9 +130,8 @@ int main(int argc, char* argv[]) {
         /* Display */
         if (update) {
             renderer.render(fractal);
+            update = false;
         }
-
-        update = true;
 
         /* Events */
         SDL_WaitEvent(&event); // blocking
@@ -146,6 +145,7 @@ int main(int argc, char* argv[]) {
                 case SDL_WINDOWEVENT_SIZE_CHANGED:
                     SDL_GetWindowSize(window, &width, &height);
                     renderer.resize(width, height);
+                    update = true;
                     break;
             }
             break;
@@ -162,15 +162,19 @@ int main(int argc, char* argv[]) {
 
             case SDLK_UP:
                 fi_translate(&fractal, window, 0,  translatef);
+                update = true;
                 break;
             case SDLK_DOWN:
                 fi_translate(&fractal, window, 0, -translatef);
+                update = true;
                 break;
             case SDLK_RIGHT:
                 fi_translate(&fractal, window,  translatef, 0);
+                update = true;
                 break;
             case SDLK_LEFT:
                 fi_translate(&fractal, window, -translatef, 0);
+                update = true;
                 break;
 
             case SDLK_p:
@@ -182,6 +186,7 @@ int main(int argc, char* argv[]) {
                 } else {
                     fi_max_iter_incr(&fractal, step);
                 }
+                update = true;
                 break;
             case SDLK_m:
             case SDLK_MINUS:
@@ -192,6 +197,7 @@ int main(int argc, char* argv[]) {
                 } else {
                     fi_max_iter_decr(&fractal, step);
                 }
+                update = true;
                 break;
 
             /* Switch. */
@@ -201,10 +207,7 @@ int main(int argc, char* argv[]) {
             /* Reset. */
             case SDLK_r:
                 fractal = fractals[generator];
-                break;
-
-            default:
-                update = false;
+                update = true;
                 break;
             }
             break;
@@ -252,11 +255,9 @@ int main(int argc, char* argv[]) {
                 double tx = (double)(dx) / width;
                 double ty = (double)(dy) / height;
                 fi_translate(&fractal, window, tx, -ty);
+                break;
             }
-            break;
-
-        default:
-            update = false;
+            update = true;
             break;
         }
     }
