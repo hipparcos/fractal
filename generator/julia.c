@@ -2,17 +2,17 @@
 
 int julia(double ix, double iy, double cx, double cy, int max_iter) {
     int iter = 0;
-    double zrealpart = ix;
-    double zimgpart = iy;
-    double zmodule = 0;
-    double tmprp = 0;
+    double z_real = ix;
+    double z_imag = iy;
+    double t_real = 0;
 
-    while ((zmodule < 4) && (iter < max_iter)) {
-        tmprp = zrealpart;
-        zrealpart = (zrealpart * zrealpart) - (zimgpart * zimgpart) + cx;
-        zimgpart = (2 * tmprp * zimgpart) + cy;
-        zmodule = (zrealpart * zrealpart) + (zimgpart * zimgpart);
-        iter++;
+    for (iter = 0; iter < max_iter; iter++) {
+        t_real = z_real;
+        z_real = (z_real * z_real) - (z_imag * z_imag) + cx;
+        z_imag = (2 * t_real * z_imag) + cy;
+        if (z_real * z_real + z_imag * z_imag > 4.0) {
+            break;
+        }
     }
 
     return iter;
