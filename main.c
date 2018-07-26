@@ -261,7 +261,7 @@ int main(int argc, char* argv[]) {
                     int new_center_y = (mbry + mbpy) / 2;
                     double tx = ((double)(new_center_x) - center_x) / width;
                     double ty = ((double)(new_center_y) - center_y) / height;
-                    translate(&fractal, window, tx, ty);
+                    translate(&fractal, window, tx, -ty);
                     /* ...then zoom in. */
                     double fx = width / (double)abs(mbrx - mbpx);
                     double fy = height / (double)abs(mbry - mbpy);
@@ -277,7 +277,7 @@ int main(int argc, char* argv[]) {
                 int dy = mbry - mbpy;
                 double tx = (double)(dx) / width;
                 double ty = (double)(dy) / height;
-                translate(&fractal, window, tx, ty);
+                translate(&fractal, window, tx, -ty);
             }
             break;
 

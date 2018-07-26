@@ -103,7 +103,7 @@ void rdr_hw_init(SDL_Window* window) {
 
     /* Shaders. */
     vs = LoadShader(GL_VERTEX_SHADER, "vertex", vertex_shader);
-    char* noise_fragment = read_file("./generator/mandelbrot.frag");
+    char* noise_fragment = read_file("./generator/fractal.frag");
     fs = LoadShader(GL_FRAGMENT_SHADER, "fragment", noise_fragment);
     free(noise_fragment);
     program = glCreateProgram();
@@ -153,8 +153,12 @@ void rdr_hw_render(struct fractal_info fi) {
     float dpp[1] = { (float)fi.dpp };
     glUniform1fv(uniform_dpp, 1, dpp);
     GLint uniform_max_iter = glGetUniformLocation(program,"u_max_iter");
-    int gl_max_iter[1] = { fi.max_iter };
-    glUniform1iv(uniform_max_iter, 1, gl_max_iter);
+    glUniform1i(uniform_max_iter, fi.max_iter);
+    GLint uniform_julia_flag = glGetUniformLocation(program, "u_julia_flag");
+    glUniform1i(uniform_julia_flag, fi.generator);
+    GLint uniform_julia = glGetUniformLocation(program, "u_julia");
+    float julia[2] = { (float)-0.8, (float)0.156 };
+    glUniform2fv(uniform_julia, 1, julia);
 
     glClearColor(0.0, 0.0, 0.0, 0.0);
     glClear(GL_COLOR_BUFFER_BIT);
