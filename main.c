@@ -105,27 +105,11 @@ int main(int argc, char* argv[]) {
     poptFreeContext(optCon);
 
     /* Select renderer. */
-    struct renderer renderer = {0};
+    struct renderer renderer;
     if (software) {
-        renderer.init            = rdr_sw_init;
-        renderer.free            = rdr_sw_free;
-        renderer.set_generator   = rdr_sw_set_generator;
-        renderer.set_center      = rdr_sw_set_center;
-        renderer.set_dpp         = rdr_sw_set_dpp;
-        renderer.translate       = rdr_sw_translate;
-        renderer.zoom            = rdr_sw_zoom;
-        renderer.resize          = rdr_sw_resize;
-        renderer.render          = rdr_sw_render;
+        renderer = sw_renderer;
     } else {
-        renderer.init            = rdr_hw_init;
-        renderer.free            = rdr_hw_free;
-        renderer.set_generator   = rdr_hw_set_generator;
-        renderer.set_center      = rdr_hw_set_center;
-        renderer.set_dpp         = rdr_hw_set_dpp;
-        renderer.translate       = rdr_hw_translate;
-        renderer.zoom            = rdr_hw_zoom;
-        renderer.resize          = rdr_hw_resize;
-        renderer.render          = rdr_hw_render;
+        renderer = hw_renderer;
     }
 
     /* Init. */
