@@ -1,6 +1,8 @@
 #ifndef _H_TYPES_
 #define _H_TYPES_
 
+#include <SDL2/SDL.h>
+
 enum generator {
     GEN_MANDELBROT,
     GEN_JULIA,
@@ -19,6 +21,10 @@ struct fractal_info {
 
 /** renderer is the interface that all renderers must implement. */
 struct renderer {
+    /** init initializes the renderer. */
+    void (*init)(SDL_Window* window, struct fractal_info fi);
+    /** free cleans up renderer memory. */
+    void (*free)(void);
     /** set_generator tells the renderer which fractal to draw. */
     void (*set_generator)(enum generator);
     /** set_center centers the view on cx,cy (in local coordinates). */

@@ -107,6 +107,8 @@ int main(int argc, char* argv[]) {
     /* Select renderer. */
     struct renderer renderer = {0};
     if (software) {
+        renderer.init            = rdr_sw_init;
+        renderer.free            = rdr_sw_free;
         renderer.set_generator   = rdr_sw_set_generator;
         renderer.set_center      = rdr_sw_set_center;
         renderer.set_dpp         = rdr_sw_set_dpp;
@@ -115,6 +117,8 @@ int main(int argc, char* argv[]) {
         renderer.resize          = rdr_sw_resize;
         renderer.render          = rdr_sw_render;
     } else {
+        renderer.init            = rdr_hw_init;
+        renderer.free            = rdr_hw_free;
         renderer.set_generator   = rdr_hw_set_generator;
         renderer.set_center      = rdr_hw_set_center;
         renderer.set_dpp         = rdr_hw_set_dpp;
@@ -134,12 +138,7 @@ int main(int argc, char* argv[]) {
     if (!window) {
         panic("Error: SDL can't open a window.");
     }
-
-    if (software) {
-        rdr_sw_init(window, fi[ifi]);
-    } else {
-        rdr_hw_init(window, fi[ifi]);
-    }
+    renderer.init(window, fi[ifi]);
 
     /* Main loop. */
     bool quit = false;
@@ -285,11 +284,7 @@ int main(int argc, char* argv[]) {
     }
 
     /* Deinit. */
-    if (software) {
-        rdr_sw_free();
-    } else {
-        rdr_hw_free();
-    }
+    renderer.free();
     SDL_DestroyWindow(window);
     SDL_Quit();
 

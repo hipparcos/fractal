@@ -6,10 +6,9 @@
 
 #include "types.h"
 
+/* renderer interface */
 void rdr_sw_init(SDL_Window* window, struct fractal_info fi);
 void rdr_sw_free(void);
-
-/* renderer interface */
 void rdr_sw_set_generator(enum generator gen);
 void rdr_sw_set_center(double cx, double cy);
 void rdr_sw_set_dpp(double dpp);
