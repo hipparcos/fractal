@@ -30,17 +30,11 @@ static const char* vertex_shader =
     /* "    color = in_color;\n" */
     "}\n";
 
-/* static const char* fragment_shader = */
-/*     "#version 330\n" */
-/*     "in vec3 color;\n" */
-/*     "void main() {\n" */
-/*     "    gl_FragColor = vec4(color, 1.0);\n" */
-/*     "}\n"; */
-
 static SDL_Window* lwindow;
 static SDL_GLContext lcontext;
 static GLuint vao, vbuffer, vs, fs, program;
-static GLint attrib_position; //, attrib_color;
+double lcx = 0.0, lcy = 0.0;
+double ldpp = 0.0;
 
 /** read_file reads all content of filename at once.
  ** Caller is responsible for calling free on returned string. */
@@ -93,6 +87,10 @@ void rdr_hw_init(SDL_Window* window, struct fractal_info fi) {
     int width, height;
     SDL_GetWindowSize(window, &width, &height);
 
+    lcx = fi.cx;
+    lcy = fi.cy;
+    ldpp = fi.dpp;
+
     /* OpenGL init. */
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
@@ -111,7 +109,7 @@ void rdr_hw_init(SDL_Window* window, struct fractal_info fi) {
 
     /* Shaders. */
     vs = LoadShader(GL_VERTEX_SHADER, "vertex", vertex_shader);
-    char* noise_fragment = read_file("./generator/noise.frag");
+    char* noise_fragment = read_file("./generator/mandelbrot.frag");
     fs = LoadShader(GL_FRAGMENT_SHADER, "fragment", noise_fragment);
     free(noise_fragment);
     program = glCreateProgram();
@@ -126,13 +124,15 @@ void rdr_hw_init(SDL_Window* window, struct fractal_info fi) {
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
     /* Shader variables. */
-    attrib_position = glGetAttribLocation(program, "in_position");
+    GLint attrib_position = glGetAttribLocation(program, "in_position");
     glEnableVertexAttribArray(attrib_position);
     glVertexAttribPointer(attrib_position, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (void*)0);
+
     /* attrib_color = glGetAttribLocation(program, "in_color"); */
     /* glEnableVertexAttribArray(attrib_color); */
     /* glVertexAttribPointer(attrib_color, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(sizeof(float) * 2)); */
 
+    glEnable(GL_TEXTURE_2D);
     glDisable(GL_DEPTH_TEST);
     glViewport(0, 0, width, height);
 }
@@ -146,27 +146,49 @@ void rdr_hw_set_generator(enum generator gen) {
 }
 
 void rdr_hw_set_center(double cx, double cy) {
+    lcx = cx;
+    lcy = cy;
 }
 
 void rdr_hw_set_dpp(double dpp) {
+    ldpp = dpp;
 }
 
 void rdr_hw_translate(double dx, double dy) {
+    int width, height;
+    SDL_GetWindowSize(lwindow, &width, &height);
+    lcx += dx * width * ldpp;
+    lcy -= dy * height * ldpp;
 }
 
 void rdr_hw_zoom(double factor) {
+    ldpp *= 1/factor;
 }
 
 void rdr_hw_resize(int width, int height) {
+    glViewport(0, 0, width, height);
 }
 
 void rdr_hw_render(unsigned long max_iter) {
     int width, height;
     SDL_GetWindowSize(lwindow, &width, &height);
-    glViewport(0, 0, width, height);
+
+    /* Update uniform variables values. */
+    GLint uniform_window_size = glGetUniformLocation(program, "u_window_size");
+    float size[2] = {(float)width, (float)height};
+    glUniform2fv(uniform_window_size, 1, size);
+    GLint uniform_center = glGetUniformLocation(program, "u_center");
+    float center[2] = {(float)lcx, (float)lcy};
+    glUniform2fv(uniform_center, 1, center);
+    GLint uniform_dpp = glGetUniformLocation(program, "u_dpp");
+    float dpp[1] = { (float)ldpp };
+    glUniform1fv(uniform_dpp, 1, dpp);
+    GLint uniform_max_iter = glGetUniformLocation(program,"u_max_iter");
+    int gl_max_iter[1] = { max_iter };
+    glUniform1iv(uniform_max_iter, 1, gl_max_iter);
+
     glClearColor(0.0, 0.0, 0.0, 0.0);
     glClear(GL_COLOR_BUFFER_BIT);
-    glUseProgram(program);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 6);
     SDL_GL_SwapWindow(lwindow);
 }
