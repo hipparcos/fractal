@@ -19,6 +19,8 @@ struct fractal_info {
     double cy;
     /** dpp is the density per pixel (width of each pixel in local coords). */
     double dpp;
+    /** jx,jy are julia set init value. */
+    double jx, jy;
 };
 
 void fi_max_iter_incr(struct fractal_info* fi, int step);

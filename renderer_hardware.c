@@ -157,7 +157,7 @@ void rdr_hw_render(struct fractal_info fi) {
     GLint uniform_julia_flag = glGetUniformLocation(program, "u_julia_flag");
     glUniform1i(uniform_julia_flag, fi.generator);
     GLint uniform_julia = glGetUniformLocation(program, "u_julia");
-    float julia[2] = { (float)-0.8, (float)0.156 };
+    float julia[2] = { (float)fi.jx, (float)fi.jy };
     glUniform2fv(uniform_julia, 1, julia);
 
     glClearColor(0.0, 0.0, 0.0, 0.0);

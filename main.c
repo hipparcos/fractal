@@ -19,7 +19,7 @@ static double translatef = 0.25;
 static int    software   = 0;
 static int    max_iter   = 50;
 static int    step       = 10;
-static enum generator generator = GEN_MANDELBROT;
+static size_t generator  = GEN_MANDELBROT;
 
 #define LENGTH(arr) sizeof(arr)/sizeof(arr[0])
 
@@ -32,6 +32,8 @@ int main(int argc, char* argv[]) {
             .cy=   0.0,
             .dpp=  0.0035,
             .max_iter = max_iter,
+            .jx=   0.0,
+            .jy=   0.0,
         },
         {
             .generator= GEN_JULIA,
@@ -39,6 +41,26 @@ int main(int argc, char* argv[]) {
             .cy=   0.0,
             .dpp=  0.00425,
             .max_iter = max_iter,
+            .jx=  -0.8,
+            .jy=   0.156,
+        },
+        {
+            .generator= GEN_JULIA,
+            .cx=   0.0,
+            .cy=   0.0,
+            .dpp=  0.00425,
+            .max_iter = max_iter,
+            .jx=  -0.4,
+            .jy=   0.6,
+        },
+        {
+            .generator= GEN_JULIA,
+            .cx=   0.0,
+            .cy=   0.0,
+            .dpp=  0.00425,
+            .max_iter = max_iter,
+            .jx=   0.285,
+            .jy=   0.01,
         },
     };
 
@@ -74,9 +96,9 @@ int main(int argc, char* argv[]) {
             case 'g':
                 gen = poptGetOptArg(optCon);
                 if (strcmp(gen, "julia") == 0) {
-                    generator = GEN_JULIA;
+                    generator = 1;
                 } else {
-                    generator = GEN_MANDELBROT;
+                    generator = 0;
                 }
                 break;
             default:

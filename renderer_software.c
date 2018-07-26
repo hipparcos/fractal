@@ -10,7 +10,7 @@
 
 #define BPP 32
 
-typedef int (*fractal_generator)(double lx, double ly, int max_iter);
+typedef int (*fractal_generator)(double ix, double iy, double cx, double cy, int max_iter);
 
 static struct {
     SDL_Renderer* renderer;
@@ -91,8 +91,10 @@ static void rdr_sw_update(struct fractal_info fi, fractal_generator gen) {
         for(int x = 0; x < fractal.buffer->w; x++) {
             // Calculate a pixel.
             int iter = gen(
-                    fi.cx + fi.dpp * (x - fractal.buffer->w/2), // lx.
-                    fi.cy + fi.dpp * (y - fractal.buffer->h/2), // ly.
+                    fi.cx + fi.dpp * (x - fractal.buffer->w/2), // ix.
+                    fi.cy + fi.dpp * (y - fractal.buffer->h/2), // iy.
+                    fi.jx,
+                    fi.jy,
                     fi.max_iter);
 
             if (iter == fi.max_iter) {

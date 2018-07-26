@@ -1,22 +1,9 @@
 #include "mandelbrot.h"
 
-int mandelbrot(double lx, double ly, int max_iter) {
-    int iter = 0;
-    double zrealpart = 0;
-    double zimgpart = 0;
-    double zmodule = 0;
-    double tmprp = 0;
+#include "julia.h"
 
-    double realpart = lx;
-    double imgpart = ly;
-
-    while ((zmodule < 4) && (iter < max_iter)) {
-        tmprp = zrealpart;
-        zrealpart = (zrealpart * zrealpart) - (zimgpart * zimgpart) + realpart;
-        zimgpart = (2 * tmprp * zimgpart) + imgpart;
-        zmodule = (zrealpart * zrealpart) + (zimgpart * zimgpart);
-        iter++;
-    }
-
-    return iter;
+int mandelbrot(double ix, double iy, double cx, double cy, int max_iter) {
+    (void)cx;
+    (void)cy;
+    return julia(0.0, 0.0, ix, iy, max_iter);
 }
