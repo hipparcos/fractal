@@ -16,7 +16,7 @@ static int    width      = 800;
 static int    height     = 600;
 static double zoomf      = 1.1;
 static double translatef = 0.25;
-static int    software   = 1;
+static int    software   = 0;
 static int    max_iter   = 50;
 static enum generator generator = GEN_MANDELBROT;
 
@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
         {"generator", 'g', POPT_ARG_STRING|POPT_ARGFLAG_SHOW_DEFAULT,
             NULL, 'g', "Set fractal generator", "mandelbrot|julia"},
         {"software", 's', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
-            &software, 0, "Use software renderer", NULL},
+            &software, 0, "Use software renderer (hardware renderer by default)", "0|1"},
         POPT_AUTOHELP
         POPT_TABLEEND
     };
