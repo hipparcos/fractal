@@ -9,7 +9,7 @@ CC=gcc
 SHELL:=/bin/bash
 DEBUG?=-ggdb3 -O0
 CFLAGS:=-Wall -Wno-implicit-function-declaration -std=c11 $(DEBUG)
-LDFLAGS:=-Wall -zmuldefs -lpopt -lSDL2 -lGL -lm
+LDFLAGS:=-Wall -zmuldefs -lpopt -lSDL2 -lGL -lGLEW -lm
 VGFLAGS?=\
 	--quiet --leak-check=full --show-leak-kinds=all \
 	--track-origins=yes --error-exitcode=1 --error-limit=no \

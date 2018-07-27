@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 
@@ -96,6 +97,11 @@ void rdr_hw_init(SDL_Window* window) {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     lcontext = SDL_GL_CreateContext(window);
+    /* GLEW init. */
+    GLenum err = glewInit();
+    if (GLEW_OK != err) {
+        panicf("GLEW error: %s\n", glewGetErrorString(err));
+    }
 
     /* VAO. */
     glGenVertexArrays(1, &vao);
