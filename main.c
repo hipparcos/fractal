@@ -23,6 +23,7 @@ static int    max_iter   = 50;
 static int    step       = 10;
 static size_t preset     = GEN_MANDELBROT;
 static double speed      = 1.0;
+static double speed_step = 0.33;
 
 static struct fractal_info presets[] = {
     {
@@ -174,7 +175,6 @@ int main(int argc, char* argv[]) {
     uint32_t old_time = SDL_GetTicks();
     uint32_t min_frame_time = 1000/60; // 60 fps limit.
     uint32_t frame = 0;
-    uint32_t sim_time = old_time;
     /* FPS display */
     uint32_t last_fps_display_time = old_time;
     uint32_t last_fps_display_at_frame = 0;
@@ -202,8 +202,7 @@ int main(int argc, char* argv[]) {
         }
         if (fi.dynamic && !pause) {
             dt = 0.001 * (double)frame_time;
-            t  = 0.001 * (double)sim_time;
-            sim_time += frame_time;
+            t += dt * fi.speed;
         }
         frame++;
 
@@ -302,6 +301,17 @@ void handle_events(SDL_Window* window, struct renderer* renderer, struct fractal
                             fi_max_iter_decr(fi, step);
                         }
                         *updt = true;
+                        break;
+
+                    case SDLK_a:
+                        fi->speed += speed_step;
+                        *updt = true;
+                        *pause = false;
+                        break;
+                    case SDLK_d:
+                        fi->speed -= speed_step;
+                        *updt = true;
+                        *pause = false;
                         break;
 
                         /* Switch. */

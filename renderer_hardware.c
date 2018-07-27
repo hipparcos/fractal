@@ -137,7 +137,6 @@ void rdr_hw_resize(int width, int height) {
 
 void rdr_hw_render(struct fractal_info fi, double t, double dt) {
     fi.cy *= -1; // invert y coord to act like software renderer.
-    t = t * fi.speed;
 
     int width, height;
     SDL_GetWindowSize(lwindow, &width, &height);

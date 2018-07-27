@@ -97,7 +97,7 @@ static void rdr_sw_update(struct fractal_info fi, fractal_generator gen, double 
     SDL_FillRect(fractal.buffer, NULL, SDL_MapRGB(fractal.buffer->format, 0, 0, 0));
 
     if (fi.dynamic) {
-        double tp = t / (2 * M_PI_2) * fi.speed;
+        double tp = t / (2 * M_PI_2);
         double ct = cos(tp);
         double st = sin(tp);
         fi.jx *= ct;
