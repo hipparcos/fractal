@@ -1,16 +1,20 @@
 #ifndef _H_TYPES_
 #define _H_TYPES_
 
+#include <stdbool.h>
 #include <SDL2/SDL.h>
 
 enum generator {
     GEN_MANDELBROT,
     GEN_JULIA,
+    GEN_JULIA_MULTISET,
 };
 
 /** fractal_info gathers init informations about fractal for renderers. */
 struct fractal_info {
     enum generator generator;
+    /** dynamic tells if rendering should depend on time. */
+    bool dynamic;
     /** max_iter is the maximum number of iteration for each pixel. */
     int max_iter;
     /** cx is the center of view x coord in local coord. */
@@ -21,6 +25,8 @@ struct fractal_info {
     double dpp;
     /** jx,jy are julia set init value. */
     double jx, jy;
+    /** n is the power value in julia_multiset. */
+    int n;
 };
 
 void fi_max_iter_incr(struct fractal_info* fi, int step);
@@ -37,7 +43,7 @@ struct renderer {
     /** resize resizes the renderer. */
     void (*resize)(int width, int height);
     /** render renders the fractal to the screen. */
-    void (*render)(struct fractal_info fi);
+    void (*render)(struct fractal_info fi, double t, double dt);
 };
 
 #endif

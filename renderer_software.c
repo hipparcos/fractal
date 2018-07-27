@@ -6,11 +6,16 @@
 
 #include "panic.h"
 #include "generator/julia.h"
+#include "generator/julia_multiset.h"
 #include "generator/mandelbrot.h"
 
 #define BPP 32
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#define M_PI_2 1.57079632679489661923
+#endif
 
-typedef int (*fractal_generator)(double ix, double iy, double cx, double cy, int max_iter);
+typedef int (*fractal_generator)(double ix, double iy, double cx, double cy, int n, int max_iter);
 
 static struct {
     SDL_Renderer* renderer;
@@ -52,9 +57,12 @@ static fractal_generator rdr_sw_get_generator(enum generator gen) {
     case GEN_JULIA:
         return julia;
         break;
+    case GEN_JULIA_MULTISET:
+        return julia_multiset;
+        break;
+    default:
     case GEN_MANDELBROT:
         return mandelbrot;
-    default:
         break;
     }
     return NULL;
@@ -84,18 +92,28 @@ void rdr_sw_resize(int width, int height) {
     }
 }
 
-static void rdr_sw_update(struct fractal_info fi, fractal_generator gen) {
+static void rdr_sw_update(struct fractal_info fi, fractal_generator gen, double t, double dt) {
+    (void)dt;
     SDL_FillRect(fractal.buffer, NULL, SDL_MapRGB(fractal.buffer->format, 0, 0, 0));
+
+    if (fi.dynamic) {
+        double tp = t / (2 * M_PI_2);
+        double ct = cos(tp);
+        double st = sin(tp);
+        fi.jx *= ct;
+        fi.jy *= st;
+    }
 
     for(int y = 0; y < fractal.buffer->h; y++) {
         for(int x = 0; x < fractal.buffer->w; x++) {
             // Calculate a pixel.
             int iter = gen(
-                    fi.cx + fi.dpp * (x - fractal.buffer->w/2), // ix.
-                    fi.cy + fi.dpp * (y - fractal.buffer->h/2), // iy.
-                    fi.jx,
-                    fi.jy,
-                    fi.max_iter);
+                        fi.cx + fi.dpp * (x - fractal.buffer->w/2), // ix.
+                        fi.cy + fi.dpp * (y - fractal.buffer->h/2), // iy.
+                        fi.jx,
+                        fi.jy,
+                        fi.n,
+                        fi.max_iter);
 
             if (iter == fi.max_iter) {
                 iter = 0;
@@ -118,8 +136,8 @@ static void rdr_sw_update(struct fractal_info fi, fractal_generator gen) {
     SDL_UpdateTexture(fractal.texture, NULL, pixels, fractal.buffer->w * sizeof(Uint32));
 }
 
-void rdr_sw_render(struct fractal_info fi) {
-    rdr_sw_update(fi, rdr_sw_get_generator(fi.generator));
+void rdr_sw_render(struct fractal_info fi, double t, double dt) {
+    rdr_sw_update(fi, rdr_sw_get_generator(fi.generator), t, dt);
     SDL_RenderClear(fractal.renderer);
     SDL_SetRenderDrawColor(fractal.renderer, 0, 0, 0, 255);
     SDL_RenderCopy(fractal.renderer, fractal.texture, NULL, NULL);

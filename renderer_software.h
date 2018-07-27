@@ -10,7 +10,7 @@
 void rdr_sw_init(SDL_Window* window);
 void rdr_sw_free(void);
 void rdr_sw_resize(int width, int height);
-void rdr_sw_render(struct fractal_info fi);
+void rdr_sw_render(struct fractal_info fi, double t, double dt);
 
 struct renderer sw_renderer = {
     .init   = rdr_sw_init,

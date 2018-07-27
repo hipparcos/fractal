@@ -105,7 +105,6 @@ void rdr_hw_init(SDL_Window* window) {
 
     /* VAO. */
     glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
 
     /* Shaders. */
     vs = LoadShader(GL_VERTEX_SHADER, "vertex", vertex_shader);
@@ -123,11 +122,6 @@ void rdr_hw_init(SDL_Window* window) {
     glBindBuffer(GL_ARRAY_BUFFER, vbuffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    /* Shader variables. */
-    GLint attrib_position = glGetAttribLocation(program, "in_position");
-    glEnableVertexAttribArray(attrib_position);
-    glVertexAttribPointer(attrib_position, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (void*)0);
-
     glEnable(GL_TEXTURE_2D);
     glDisable(GL_DEPTH_TEST);
     glViewport(0, 0, width, height);
@@ -141,33 +135,59 @@ void rdr_hw_resize(int width, int height) {
     glViewport(0, 0, width, height);
 }
 
-void rdr_hw_render(struct fractal_info fi) {
+void rdr_hw_render(struct fractal_info fi, double t, double dt) {
     fi.cy *= -1; // invert y coord to act like software renderer.
 
     int width, height;
     SDL_GetWindowSize(lwindow, &width, &height);
     glViewport(0, 0, width, height);
+    glUseProgram(program);
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbuffer);
+
+    /* Shader variables. */
+    GLint attrib_position = glGetAttribLocation(program, "in_position");
+    glEnableVertexAttribArray(attrib_position);
+    glVertexAttribPointer(attrib_position, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (void*)0);
 
     /* Update uniform variables values. */
+    /* u_window_size */
     GLint uniform_window_size = glGetUniformLocation(program, "u_window_size");
     float size[2] = {(float)width, (float)height};
     glUniform2fv(uniform_window_size, 1, size);
+    /* u_center */
     GLint uniform_center = glGetUniformLocation(program, "u_center");
     float center[2] = {(float)fi.cx, (float)fi.cy};
     glUniform2fv(uniform_center, 1, center);
+    /* u_dpp */
     GLint uniform_dpp = glGetUniformLocation(program, "u_dpp");
     float dpp[1] = { (float)fi.dpp };
     glUniform1fv(uniform_dpp, 1, dpp);
+    /* u_max_iter */
     GLint uniform_max_iter = glGetUniformLocation(program,"u_max_iter");
     glUniform1i(uniform_max_iter, fi.max_iter);
-    GLint uniform_julia_flag = glGetUniformLocation(program, "u_julia_flag");
-    glUniform1i(uniform_julia_flag, fi.generator);
-    GLint uniform_julia = glGetUniformLocation(program, "u_julia");
+    /* u_generator */
+    GLint uniform_generator = glGetUniformLocation(program, "u_generator");
+    glUniform1i(uniform_generator, fi.generator);
+    /* u_j */
+    GLint uniform_julia = glGetUniformLocation(program, "u_j");
     float julia[2] = { (float)fi.jx, (float)fi.jy };
     glUniform2fv(uniform_julia, 1, julia);
+    /* u_t */
+    GLint uniform_t = glGetUniformLocation(program, "u_t");
+    float tf[1] = { (float)t };
+    glUniform1fv(uniform_t, 1, tf);
+    /* u_dt */
+    GLint uniform_dt = glGetUniformLocation(program, "u_dt");
+    float dtf[1] = { (float)dt };
+    glUniform1fv(uniform_dt, 1, dtf);
+    /* u_n */
+    GLint uniform_n = glGetUniformLocation(program,"u_n");
+    glUniform1i(uniform_n, fi.n);
 
     glClearColor(0.0, 0.0, 0.0, 0.0);
     glClear(GL_COLOR_BUFFER_BIT);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 6);
+
     SDL_GL_SwapWindow(lwindow);
 }

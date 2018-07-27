@@ -10,7 +10,9 @@
 #include "panic.h"
 #include "types.h"
 
-/* CLI arguments default. */
+#define LENGTH(arr) sizeof(arr)/sizeof(arr[0])
+
+/* Config. */
 static char*  title      = "fractal";
 static int    width      = 800;
 static int    height     = 600;
@@ -19,51 +21,65 @@ static double translatef = 0.25;
 static int    software   = 0;
 static int    max_iter   = 50;
 static int    step       = 10;
-static size_t generator  = GEN_MANDELBROT;
+static size_t preset     = GEN_MANDELBROT;
 
-#define LENGTH(arr) sizeof(arr)/sizeof(arr[0])
+static struct fractal_info presets[] = {
+    {
+        .generator= GEN_MANDELBROT,
+        .dynamic= false,
+        .cx=  -0.7,
+        .cy=   0.0,
+        .dpp=  0.0035,
+        .max_iter = 50,
+        .jx=   0.0,
+        .jy=   0.0,
+    },
+    {
+        .generator= GEN_JULIA,
+        .dynamic= false,
+        .cx=   0.0,
+        .cy=   0.0,
+        .dpp=  0.00425,
+        .max_iter = 50,
+        .jx=  -0.8,
+        .jy=   0.156,
+    },
+    {
+        .generator= GEN_JULIA,
+        .dynamic= false,
+        .cx=   0.0,
+        .cy=   0.0,
+        .dpp=  0.00425,
+        .max_iter = 50,
+        .jx=  -0.4,
+        .jy=   0.6,
+    },
+    {
+        .generator= GEN_JULIA,
+        .dynamic= false,
+        .cx=   0.0,
+        .cy=   0.0,
+        .dpp=  0.00425,
+        .max_iter = 50,
+        .jx=   0.285,
+        .jy=   0.01,
+    },
+    {
+        .generator= GEN_JULIA_MULTISET,
+        .dynamic= true,
+        .cx=   0.0,
+        .cy=   0.0,
+        .dpp=  0.00425,
+        .max_iter = 50,
+        .jx=   0.7885,
+        .jy=   0.7885,
+        .n=    2,
+    },
+};
+
+void handle_events(SDL_Window* window, struct renderer* renderer, struct fractal_info* fi, bool* quit, bool* updt);
 
 int main(int argc, char* argv[]) {
-    /* Default config. */
-    struct fractal_info fractals[] = {
-        {
-            .generator= GEN_MANDELBROT,
-            .cx=  -0.7,
-            .cy=   0.0,
-            .dpp=  0.0035,
-            .max_iter = max_iter,
-            .jx=   0.0,
-            .jy=   0.0,
-        },
-        {
-            .generator= GEN_JULIA,
-            .cx=   0.0,
-            .cy=   0.0,
-            .dpp=  0.00425,
-            .max_iter = max_iter,
-            .jx=  -0.8,
-            .jy=   0.156,
-        },
-        {
-            .generator= GEN_JULIA,
-            .cx=   0.0,
-            .cy=   0.0,
-            .dpp=  0.00425,
-            .max_iter = max_iter,
-            .jx=  -0.4,
-            .jy=   0.6,
-        },
-        {
-            .generator= GEN_JULIA,
-            .cx=   0.0,
-            .cy=   0.0,
-            .dpp=  0.00425,
-            .max_iter = max_iter,
-            .jx=   0.285,
-            .jy=   0.01,
-        },
-    };
-
     /* CLI arguments. */
     struct poptOption optionsTable[] = {
         {"width", 'w', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
@@ -79,7 +95,7 @@ int main(int argc, char* argv[]) {
         {"step", '\0', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
             &step, 0, "Set max iteration (incr|decr)ementation step", NULL},
         {"generator", 'g', POPT_ARG_STRING,
-            NULL, 'g', "Set fractal generator (default: mandelbrot)", "mandelbrot|julia"},
+            NULL, 'g', "Set fractal generator (default: mandelbrot)", "mandelbrot|julia|juliams"},
         {"software", 's', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
             &software, 0, "Use software renderer (hardware renderer by default)", "0|1"},
         POPT_AUTOHELP
@@ -96,9 +112,11 @@ int main(int argc, char* argv[]) {
             case 'g':
                 gen = poptGetOptArg(optCon);
                 if (strcmp(gen, "julia") == 0) {
-                    generator = 1;
+                    preset = 1;
+                } else if (strcmp(gen, "juliams") == 0) {
+                    preset = 4;
                 } else {
-                    generator = 0;
+                    preset = 0;
                 }
                 break;
             default:
@@ -115,9 +133,9 @@ int main(int argc, char* argv[]) {
     }
     poptFreeContext(optCon);
 
-    /* Set max_iter for all fractals from CLI argument. */
-    for (size_t i = 0; i < LENGTH(fractals); i++) {
-        fractals[i].max_iter = max_iter;
+    /* Set max_iter for all presets from CLI argument. */
+    for (size_t i = 0; i < LENGTH(presets); i++) {
+        presets[i].max_iter = max_iter;
     }
 
     /* Select renderer. */
@@ -127,8 +145,6 @@ int main(int argc, char* argv[]) {
     } else {
         renderer = hw_renderer;
     }
-    /* Set fractal info. */
-    struct fractal_info fractal = fractals[generator];
 
     /* Init. */
     SDL_Init(SDL_INIT_VIDEO);
@@ -142,145 +158,53 @@ int main(int argc, char* argv[]) {
     }
     renderer.init(window);
 
-    /* Main loop. */
-    bool quit = false;
-    bool update = true;
-    SDL_Event event;
-    Uint16 mbpx = 0, mbpy = 0, mbrx = 0, mbry = 0;
+    struct fractal_info fi = presets[preset];
 
-    while(!quit) {
-        /* Display */
-        if (update) {
-            renderer.render(fractal);
-            update = false;
+    /* Main loop variables. */
+    bool quit = false;
+    bool updt = true;
+    double t  = 0.0;
+    double dt = 0.0;
+    uint32_t old_time = SDL_GetTicks();
+    uint32_t min_frame_time = 1000/60; // 60 fps limit.
+    uint32_t frame = 0;
+    /* FPS display */
+    uint32_t last_fps_display_time = old_time;
+    uint32_t last_fps_display_at_frame = 0;
+    uint32_t fps_display_interval = 1000; // 1 / s.
+
+    /* Main loop. */
+    while (!quit) {
+        /* Event handling */
+        handle_events(window, &renderer, &fi, &quit, &updt);
+
+        /* Rendering */
+        if (updt) {
+            renderer.render(fi, t, dt);
+            if (!fi.dynamic) {
+                updt = false;
+            }
         }
 
-        /* Events */
-        SDL_WaitEvent(&event); // blocking
-        switch(event.type) {
-        case SDL_QUIT:
-            quit = true;
-            break;
+        /* FPS limiter */
+        uint32_t new_time = SDL_GetTicks();
+        uint32_t frame_time = new_time - old_time;
+        old_time = new_time;
+        if (frame_time < min_frame_time) {
+            SDL_Delay(min_frame_time - frame_time);
+        }
+        dt = 0.001 * (double)frame_time;
+        t  = 0.001 * (double)new_time;
+        frame++;
 
-        case SDL_WINDOWEVENT:
-            switch (event.window.event) {
-                case SDL_WINDOWEVENT_SIZE_CHANGED:
-                    SDL_GetWindowSize(window, &width, &height);
-                    renderer.resize(width, height);
-                    update = true;
-                    break;
-            }
-            break;
-
-        case SDL_KEYDOWN:
-            switch(event.key.keysym.sym) {
-            case SDLK_q:
-            case SDLK_ESCAPE:
-                quit = true;
-                break;
-
-            case SDLK_u:
-                break;
-
-            case SDLK_UP:
-                fi_translate(&fractal, window, 0,  translatef);
-                update = true;
-                break;
-            case SDLK_DOWN:
-                fi_translate(&fractal, window, 0, -translatef);
-                update = true;
-                break;
-            case SDLK_RIGHT:
-                fi_translate(&fractal, window,  translatef, 0);
-                update = true;
-                break;
-            case SDLK_LEFT:
-                fi_translate(&fractal, window, -translatef, 0);
-                update = true;
-                break;
-
-            case SDLK_p:
-            case SDLK_PLUS:
-            case SDLK_KP_PLUS:
-                if((event.key.keysym.mod & KMOD_LCTRL) == KMOD_LCTRL ||
-                        (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
-                    fi_zoom(&fractal, zoomf);
-                } else {
-                    fi_max_iter_incr(&fractal, step);
-                }
-                update = true;
-                break;
-            case SDLK_m:
-            case SDLK_MINUS:
-            case SDLK_KP_MINUS:
-                if((event.key.keysym.mod & KMOD_LCTRL) == KMOD_LCTRL ||
-                        (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
-                    fi_zoom(&fractal, 1/zoomf);
-                } else {
-                    fi_max_iter_decr(&fractal, step);
-                }
-                update = true;
-                break;
-
-            /* Switch. */
-            case SDLK_s:
-                generator += 1;
-                generator %= LENGTH(fractals);
-            /* Reset. */
-            case SDLK_r:
-                fractal = fractals[generator];
-                update = true;
-                break;
-            }
-            break;
-
-        case SDL_MOUSEBUTTONDOWN:
-            switch(event.button.button) {
-            case SDL_BUTTON_LEFT:
-            case SDL_BUTTON_MIDDLE:
-                mbpx = event.button.x;
-                mbpy = event.button.y;
-                update = false;
-                break;
-            }
-            break;
-
-        case SDL_MOUSEBUTTONUP:
-            switch(event.button.button) {
-            /* Zoom (box). */
-            case SDL_BUTTON_LEFT:
-                mbrx = event.button.x;
-                mbry = event.button.y;
-
-                if(mbrx != mbpx && mbry != mbpy) {
-                    /* Center the view... */
-                    int center_x = width / 2;
-                    int center_y = height / 2;
-                    int new_center_x = (mbrx + mbpx) / 2;
-                    int new_center_y = (mbry + mbpy) / 2;
-                    double tx = ((double)(new_center_x) - center_x) / width;
-                    double ty = ((double)(new_center_y) - center_y) / height;
-                    fi_translate(&fractal, window, tx, -ty);
-                    /* ...then zoom in. */
-                    double fx = width / (double)abs(mbrx - mbpx);
-                    double fy = height / (double)abs(mbry - mbpy);
-                    double fc = (fx < fy) ? fx : fy;
-                    fi_zoom(&fractal, fc);
-                }
-                break;
-            /* Translation. */
-            case SDL_BUTTON_MIDDLE:
-                mbrx = event.button.x;
-                mbry = event.button.y;
-                int dx = mbrx - mbpx;
-                int dy = mbry - mbpy;
-                double tx = (double)(dx) / width;
-                double ty = (double)(dy) / height;
-                fi_translate(&fractal, window, tx, -ty);
-                break;
-            }
-            update = true;
-            break;
+        /* Display fps in console. */
+        if (fi.dynamic && new_time > last_fps_display_time + fps_display_interval) {
+            fprintf(stdout, "> %d frames per second\n", frame - last_fps_display_at_frame);
+            last_fps_display_time = new_time;
+            last_fps_display_at_frame = frame;
+        } else if (!fi.dynamic) {
+            last_fps_display_time = new_time;
+            last_fps_display_at_frame = frame;
         }
     }
 
@@ -292,3 +216,136 @@ int main(int argc, char* argv[]) {
     return EXIT_SUCCESS;
 }
 
+/** handle_events responds to SDL events. Depends on config variables. */
+void handle_events(SDL_Window* window, struct renderer* renderer, struct fractal_info* fi, bool* quit, bool* updt) {
+    SDL_Event event;
+    static Uint16 mbpx = 0, mbpy = 0, mbrx = 0, mbry = 0;
+    /* Events */
+    while (SDL_PollEvent(&event)) {
+        switch(event.type) {
+            case SDL_QUIT:
+                *quit = true;
+                break;
+
+            case SDL_WINDOWEVENT:
+                switch (event.window.event) {
+                    case SDL_WINDOWEVENT_SIZE_CHANGED:
+                        SDL_GetWindowSize(window, &width, &height);
+                        renderer->resize(width, height);
+                        *updt = true;
+                        break;
+                }
+                break;
+
+            case SDL_KEYDOWN:
+                switch(event.key.keysym.sym) {
+                    case SDLK_q:
+                    case SDLK_ESCAPE:
+                        *quit = true;
+                        break;
+
+                    case SDLK_u:
+                        break;
+
+                    case SDLK_UP:
+                        fi_translate(fi, window, 0,  translatef);
+                        *updt = true;
+                        break;
+                    case SDLK_DOWN:
+                        fi_translate(fi, window, 0, -translatef);
+                        *updt = true;
+                        break;
+                    case SDLK_RIGHT:
+                        fi_translate(fi, window,  translatef, 0);
+                        *updt = true;
+                        break;
+                    case SDLK_LEFT:
+                        fi_translate(fi, window, -translatef, 0);
+                        *updt = true;
+                        break;
+
+                    case SDLK_p:
+                    case SDLK_PLUS:
+                    case SDLK_KP_PLUS:
+                        if((event.key.keysym.mod & KMOD_LCTRL) == KMOD_LCTRL ||
+                                (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
+                            fi_zoom(fi, zoomf);
+                        } else {
+                            fi_max_iter_incr(fi, step);
+                        }
+                        *updt = true;
+                        break;
+                    case SDLK_m:
+                    case SDLK_MINUS:
+                    case SDLK_KP_MINUS:
+                        if((event.key.keysym.mod & KMOD_LCTRL) == KMOD_LCTRL ||
+                                (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
+                            fi_zoom(fi, 1/zoomf);
+                        } else {
+                            fi_max_iter_decr(fi, step);
+                        }
+                        *updt = true;
+                        break;
+
+                        /* Switch. */
+                    case SDLK_s:
+                        preset += 1;
+                        preset %= LENGTH(presets);
+                        /* Reset. */
+                    case SDLK_r:
+                        *fi = presets[preset];
+                        *updt = true;
+                        break;
+                }
+                break;
+
+            case SDL_MOUSEBUTTONDOWN:
+                switch(event.button.button) {
+                    case SDL_BUTTON_LEFT:
+                    case SDL_BUTTON_MIDDLE:
+                        mbpx = event.button.x;
+                        mbpy = event.button.y;
+                        *updt = false;
+                        break;
+                }
+                break;
+
+            case SDL_MOUSEBUTTONUP:
+                switch(event.button.button) {
+                    /* Zoom (box). */
+                    case SDL_BUTTON_LEFT:
+                        mbrx = event.button.x;
+                        mbry = event.button.y;
+
+                        if(mbrx != mbpx && mbry != mbpy) {
+                            /* Center the view... */
+                            int center_x = width / 2;
+                            int center_y = height / 2;
+                            int new_center_x = (mbrx + mbpx) / 2;
+                            int new_center_y = (mbry + mbpy) / 2;
+                            double tx = ((double)(new_center_x) - center_x) / width;
+                            double ty = ((double)(new_center_y) - center_y) / height;
+                            fi_translate(fi, window, tx, -ty);
+                            /* ...then zoom in. */
+                            double fx = width / (double)abs(mbrx - mbpx);
+                            double fy = height / (double)abs(mbry - mbpy);
+                            double fc = (fx < fy) ? fx : fy;
+                            fi_zoom(fi, fc);
+                        }
+                        break;
+                        /* Translation. */
+                    case SDL_BUTTON_MIDDLE:
+                        mbrx = event.button.x;
+                        mbry = event.button.y;
+                        int dx = mbrx - mbpx;
+                        int dy = mbry - mbpy;
+                        double tx = (double)(dx) / width;
+                        double ty = (double)(dy) / height;
+                        fi_translate(fi, window, tx, -ty);
+                        break;
+                }
+                *updt = true;
+                break;
+        }
+    }
+}

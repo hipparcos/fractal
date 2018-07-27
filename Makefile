@@ -1,5 +1,6 @@
 out=fractal
-sources=main.c types.c panic.c renderer_software.c renderer_hardware.c generator/julia.c generator/mandelbrot.c
+sources=main.c types.c panic.c renderer_software.c renderer_hardware.c \
+		generator/julia_multiset.c generator/julia.c generator/mandelbrot.c
 build_dir:=build
 
 objects=$(addprefix $(build_dir)/,$(sources:%.c=%.o))
@@ -8,7 +9,7 @@ deps=$(addprefix $(build_dir)/,$(sources:%.c=%.d))
 CC=gcc
 SHELL:=/bin/bash
 DEBUG?=-ggdb3 -O0
-CFLAGS:=-Wall -Wno-implicit-function-declaration -std=c11 $(DEBUG)
+CFLAGS:=-Wall -std=c11 $(DEBUG)
 LDFLAGS:=-Wall -zmuldefs -lpopt -lSDL2 -lGL -lGLEW -lm
 VGFLAGS?=\
 	--quiet --leak-check=full --show-leak-kinds=all \
