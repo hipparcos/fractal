@@ -79,7 +79,7 @@ static struct fractal_info presets[] = {
     },
 };
 
-void handle_events(SDL_Window* window, struct renderer* renderer, struct fractal_info* fi, bool* quit, bool* updt);
+void handle_events(SDL_Window* window, struct renderer* renderer, struct fractal_info* fi, bool* quit, bool* updt, bool* pause);
 
 int main(int argc, char* argv[]) {
     /* CLI arguments. */
@@ -168,11 +168,13 @@ int main(int argc, char* argv[]) {
     /* Main loop variables. */
     bool quit = false;
     bool updt = true;
+    bool pause = false;
     double t  = 0.0;
     double dt = 0.0;
     uint32_t old_time = SDL_GetTicks();
     uint32_t min_frame_time = 1000/60; // 60 fps limit.
     uint32_t frame = 0;
+    uint32_t sim_time = old_time;
     /* FPS display */
     uint32_t last_fps_display_time = old_time;
     uint32_t last_fps_display_at_frame = 0;
@@ -181,7 +183,7 @@ int main(int argc, char* argv[]) {
     /* Main loop. */
     while (!quit) {
         /* Event handling */
-        handle_events(window, &renderer, &fi, &quit, &updt);
+        handle_events(window, &renderer, &fi, &quit, &updt, &pause);
 
         /* Rendering */
         if (updt) {
@@ -198,8 +200,11 @@ int main(int argc, char* argv[]) {
         if (frame_time < min_frame_time) {
             SDL_Delay(min_frame_time - frame_time);
         }
-        dt = 0.001 * (double)frame_time;
-        t  = 0.001 * (double)new_time;
+        if (fi.dynamic && !pause) {
+            dt = 0.001 * (double)frame_time;
+            t  = 0.001 * (double)sim_time;
+            sim_time += frame_time;
+        }
         frame++;
 
         /* Display fps in console. */
@@ -222,7 +227,7 @@ int main(int argc, char* argv[]) {
 }
 
 /** handle_events responds to SDL events. Depends on config variables. */
-void handle_events(SDL_Window* window, struct renderer* renderer, struct fractal_info* fi, bool* quit, bool* updt) {
+void handle_events(SDL_Window* window, struct renderer* renderer, struct fractal_info* fi, bool* quit, bool* updt, bool* pause) {
     SDL_Event event;
     static Uint16 mbpx = 0, mbpy = 0, mbrx = 0, mbry = 0;
     /* Events */
@@ -250,6 +255,13 @@ void handle_events(SDL_Window* window, struct renderer* renderer, struct fractal
                         break;
 
                     case SDLK_u:
+                        *updt = true;
+                        *pause = false;
+                        break;
+
+                    case SDLK_SPACE:
+                        *updt = true;
+                        *pause = !(*pause);
                         break;
 
                     case SDLK_UP:
@@ -296,6 +308,7 @@ void handle_events(SDL_Window* window, struct renderer* renderer, struct fractal
                     case SDLK_s:
                         preset += 1;
                         preset %= LENGTH(presets);
+                        *pause = false;
                         /* Reset. */
                     case SDLK_r:
                         *fi = presets[preset];

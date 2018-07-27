@@ -47,6 +47,7 @@ CTRL+`+`        zoom+ x1.1
 CTRL+`-`        zoom- x1.1
 click + drag    zoom (box)
 Middle + drag   move
+Space           pause (dynamic only)
 ```
 
 ## CLI arguments
