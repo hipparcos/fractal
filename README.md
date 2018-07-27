@@ -70,3 +70,9 @@ Help options:
   -?, --help                                   Show this help message
       --usage                                  Display brief usage message``bash
 ```
+
+## TODO
+
+- [ ] Add a GUI (vurtun/nuklear);
+- [ ] Use libdill to make software renderer concurrent;
+- [ ] Store presets in a config file (cktan/tomlc99).
