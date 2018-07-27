@@ -22,6 +22,7 @@ static int    software   = 0;
 static int    max_iter   = 50;
 static int    step       = 10;
 static size_t preset     = GEN_MANDELBROT;
+static double speed      = 1.0;
 
 static struct fractal_info presets[] = {
     {
@@ -67,6 +68,7 @@ static struct fractal_info presets[] = {
     {
         .generator= GEN_JULIA_MULTISET,
         .dynamic= true,
+        .speed=   1.0,
         .cx=   0.0,
         .cy=   0.0,
         .dpp=  0.00425,
@@ -96,6 +98,8 @@ int main(int argc, char* argv[]) {
             &step, 0, "Set max iteration (incr|decr)ementation step", NULL},
         {"generator", 'g', POPT_ARG_STRING,
             NULL, 'g', "Set fractal generator (default: mandelbrot)", "mandelbrot|julia|juliams"},
+        {"speed", '\0', POPT_ARG_DOUBLE|POPT_ARGFLAG_SHOW_DEFAULT,
+            &speed, 0, "Set dynamic fractals rendering speed", NULL},
         {"software", 's', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
             &software, 0, "Use software renderer (hardware renderer by default)", "0|1"},
         POPT_AUTOHELP
@@ -136,6 +140,7 @@ int main(int argc, char* argv[]) {
     /* Set max_iter for all presets from CLI argument. */
     for (size_t i = 0; i < LENGTH(presets); i++) {
         presets[i].max_iter = max_iter;
+        presets[i].speed = speed;
     }
 
     /* Select renderer. */

@@ -15,6 +15,8 @@ struct fractal_info {
     enum generator generator;
     /** dynamic tells if rendering should depend on time. */
     bool dynamic;
+    /** speed controls dynamic fractals rendering speed (time multiplier). */
+    double speed;
     /** max_iter is the maximum number of iteration for each pixel. */
     int max_iter;
     /** cx is the center of view x coord in local coord. */
