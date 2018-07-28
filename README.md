@@ -2,6 +2,13 @@
 
 A simple fractal drawer written in C (C11 revision) using SDL2 & OpenGL 3.3.
 
+![Fractal Julia Multi-Set Dynamic](https://github.com/hipparcos/fractal/blob/master/fractal.gif)
+
+**Output for:**
+```bash
+./fractal -w 640 -h 480 -g juliams --speed 2.0
+```
+
 ## Getting started
 
 ### Prerequisites
