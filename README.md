@@ -27,6 +27,8 @@ Building:
 ```bash
 git clone https://github.com/hipparcos/fractal.git
 cd fractal
+git submodule init
+git submodule update
 make
 ./fractal
 ```
@@ -82,4 +84,4 @@ Help options:
 
 - [ ] Add a GUI (vurtun/nuklear);
 - [ ] Use libdill to make software renderer concurrent;
-- [ ] Store presets in a config file (cktan/tomlc99).
+- [x] Store presets in a config file (cktan/tomlc99).

@@ -1,0 +1,41 @@
+[[presets]]
+name      = "mandelbrot"
+generator = "mandelbrot"
+center    = { x = -0.7, y = 0.0 }
+dpp       = 0.0035
+max_iter  = 50
+
+[[presets]]
+name      = "julia1"
+generator = "julia"
+center    = { x = 0.0, y = 0.0 }
+dpp       = 0.00425
+max_iter  = 50
+julia     = { x = -0.8, y = 0.156 }
+
+[[presets]]
+name      = "julia2"
+generator = "julia"
+center    = { x = 0.0, y = 0.0 }
+dpp       = 0.00425
+max_iter  = 50
+julia     = { x = -0.4, y = 0.6 }
+
+[[presets]]
+name      = "julia3"
+generator = "julia"
+center    = { x = 0.0, y = 0.0 }
+dpp       = 0.00425
+max_iter  = 50
+julia     = { x = 0.285, y = 0.01 }
+
+[[presets]]
+name      = "juliams"
+generator = "julia_multiset"
+dynamic   = true
+speed     = 1.0
+center    = { x = 0.0, y = 0.0 }
+dpp       = 0.00425
+max_iter  = 50
+julia     = { x = 0.7885, y = 0.7885 }
+n         = 2

@@ -7,10 +7,9 @@
 
 #include "renderer_software.h"
 #include "renderer_hardware.h"
+#include "config.h"
 #include "panic.h"
 #include "types.h"
-
-#define LENGTH(arr) sizeof(arr)/sizeof(arr[0])
 
 /* Config. */
 static char*  title      = "fractal";
@@ -21,66 +20,12 @@ static double translatef = 0.25;
 static int    software   = 0;
 static int    max_iter   = 50;
 static int    step       = 10;
-static size_t preset     = GEN_MANDELBROT;
+static size_t preset     = 0;
 static double speed      = 1.0;
 static double speed_step = 0.33;
 
-static struct fractal_info presets[] = {
-    {
-        .generator= GEN_MANDELBROT,
-        .dynamic= false,
-        .cx=  -0.7,
-        .cy=   0.0,
-        .dpp=  0.0035,
-        .max_iter = 50,
-        .jx=   0.0,
-        .jy=   0.0,
-    },
-    {
-        .generator= GEN_JULIA,
-        .dynamic= false,
-        .cx=   0.0,
-        .cy=   0.0,
-        .dpp=  0.00425,
-        .max_iter = 50,
-        .jx=  -0.8,
-        .jy=   0.156,
-    },
-    {
-        .generator= GEN_JULIA,
-        .dynamic= false,
-        .cx=   0.0,
-        .cy=   0.0,
-        .dpp=  0.00425,
-        .max_iter = 50,
-        .jx=  -0.4,
-        .jy=   0.6,
-    },
-    {
-        .generator= GEN_JULIA,
-        .dynamic= false,
-        .cx=   0.0,
-        .cy=   0.0,
-        .dpp=  0.00425,
-        .max_iter = 50,
-        .jx=   0.285,
-        .jy=   0.01,
-    },
-    {
-        .generator= GEN_JULIA_MULTISET,
-        .dynamic= true,
-        .speed=   1.0,
-        .cx=   0.0,
-        .cy=   0.0,
-        .dpp=  0.00425,
-        .max_iter = 50,
-        .jx=   0.7885,
-        .jy=   0.7885,
-        .n=    2,
-    },
-};
-
-void handle_events(SDL_Window* window, struct renderer* renderer, struct fractal_info* fi, bool* quit, bool* updt, bool* pause);
+void handle_events(SDL_Window* window, struct renderer* renderer, struct config* cfg,
+        struct fractal_info* fi, bool* quit, bool* updt, bool* pause);
 
 int main(int argc, char* argv[]) {
     /* CLI arguments. */
@@ -94,13 +39,13 @@ int main(int argc, char* argv[]) {
         {"translate", 't', POPT_ARG_DOUBLE|POPT_ARGFLAG_SHOW_DEFAULT,
             &translatef, 0, "Set translation factor based on screen size", NULL},
         {"iter", 'i', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
-            &max_iter, 0, "Set max iteration limit", NULL},
+            &max_iter, 'i', "Set max iteration limit", NULL},
         {"step", '\0', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
             &step, 0, "Set max iteration (incr|decr)ementation step", NULL},
         {"generator", 'g', POPT_ARG_STRING,
             NULL, 'g', "Set fractal generator (default: mandelbrot)", "mandelbrot|julia|juliams"},
         {"speed", '\0', POPT_ARG_DOUBLE|POPT_ARGFLAG_SHOW_DEFAULT,
-            &speed, 0, "Set dynamic fractals rendering speed", NULL},
+            &speed, 's', "Set dynamic fractals rendering speed", NULL},
         {"software", 's', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
             &software, 0, "Use software renderer (hardware renderer by default)", "0|1"},
         POPT_AUTOHELP
@@ -110,6 +55,12 @@ int main(int argc, char* argv[]) {
     poptContext optCon = poptGetContext(NULL, argc, (const char**) argv, optionsTable, 0);
     poptSetOtherOptionHelp(optCon, "[OPTIONS]");
 
+    /* Read config. */
+    struct config cfg = {0};
+    config_init(&cfg);
+    config_read("config.toml", &cfg);
+
+    /* Custom CLI actions. */
     char c;
     char* gen;
     while ((c = poptGetNextOpt(optCon)) >= 0) {
@@ -122,6 +73,16 @@ int main(int argc, char* argv[]) {
                     preset = 4;
                 } else {
                     preset = 0;
+                }
+                break;
+            case 's':
+                for (size_t i = 0; i < cfg.presetc; i++) {
+                    cfg.presets[i]->speed = speed;
+                }
+                break;
+            case 'i':
+                for (size_t i = 0; i < cfg.presetc; i++) {
+                    cfg.presets[i]->max_iter = max_iter;
                 }
                 break;
             default:
@@ -137,12 +98,6 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
     poptFreeContext(optCon);
-
-    /* Set max_iter for all presets from CLI argument. */
-    for (size_t i = 0; i < LENGTH(presets); i++) {
-        presets[i].max_iter = max_iter;
-        presets[i].speed = speed;
-    }
 
     /* Select renderer. */
     struct renderer renderer;
@@ -164,7 +119,7 @@ int main(int argc, char* argv[]) {
     }
     renderer.init(window);
 
-    struct fractal_info fi = presets[preset];
+    struct fractal_info fi = *(cfg.presets[preset]);
 
     /* Main loop variables. */
     bool quit = false;
@@ -183,7 +138,7 @@ int main(int argc, char* argv[]) {
     /* Main loop. */
     while (!quit) {
         /* Event handling */
-        handle_events(window, &renderer, &fi, &quit, &updt, &pause);
+        handle_events(window, &renderer, &cfg, &fi, &quit, &updt, &pause);
 
         /* Rendering */
         if (updt) {
@@ -221,12 +176,14 @@ int main(int argc, char* argv[]) {
     renderer.free();
     SDL_DestroyWindow(window);
     SDL_Quit();
+    config_clear(&cfg);
 
     return EXIT_SUCCESS;
 }
 
 /** handle_events responds to SDL events. Depends on config variables. */
-void handle_events(SDL_Window* window, struct renderer* renderer, struct fractal_info* fi, bool* quit, bool* updt, bool* pause) {
+void handle_events(SDL_Window* window, struct renderer* renderer, struct config* cfg,
+        struct fractal_info* fi, bool* quit, bool* updt, bool* pause) {
     SDL_Event event;
     static Uint16 mbpx = 0, mbpy = 0, mbrx = 0, mbry = 0;
     /* Events */
@@ -317,11 +274,11 @@ void handle_events(SDL_Window* window, struct renderer* renderer, struct fractal
                         /* Switch. */
                     case SDLK_s:
                         preset += 1;
-                        preset %= LENGTH(presets);
+                        preset %= cfg->presetc;
                         *pause = false;
                         /* Reset. */
                     case SDLK_r:
-                        *fi = presets[preset];
+                        *fi = *cfg->presets[preset];
                         *updt = true;
                         break;
                 }
