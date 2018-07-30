@@ -35,6 +35,7 @@ void fi_max_iter_incr(struct fractal_info* fi, int step);
 void fi_max_iter_decr(struct fractal_info* fi, int step);
 void fi_translate(struct fractal_info* fi, SDL_Window* window, double dx, double dy);
 void fi_zoom(struct fractal_info* fi, double factor);
+void fi_print(struct fractal_info* fi);
 
 /** renderer is the interface that all renderers must implement. */
 struct renderer {

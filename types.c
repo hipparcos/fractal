@@ -31,3 +31,23 @@ void fi_zoom(struct fractal_info* fi, double factor) {
     }
     fi->dpp *= 1/factor;
 }
+
+void fi_print(struct fractal_info* fi) {
+    if (!fi) {
+        return;
+    }
+
+    FILE* out = stdout;
+    fprintf(out, "fractal_info {\n");
+    fprintf(out, "  .generator= %d\n", fi->generator);
+    fprintf(out, "  .dynamic=   %s\n", (fi->dynamic) ? "true" : "false");
+    fprintf(out, "  .speed=     %lf\n", fi->speed);
+    fprintf(out, "  .max_iter=  %d\n", fi->max_iter);
+    fprintf(out, "  .cx=        %lf\n", fi->cx);
+    fprintf(out, "  .cy=        %lf\n", fi->cy);
+    fprintf(out, "  .dpp=       %lf\n", fi->dpp);
+    fprintf(out, "  .jx=        %lf\n", fi->jx);
+    fprintf(out, "  .jy=        %lf\n", fi->jy);
+    fprintf(out, "  .n=         %d\n", fi->n);
+    fprintf(out, "}\n");
+}
