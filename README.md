@@ -65,6 +65,7 @@ d               decrease speed
 
 ```
 Usage: fractal [OPTIONS]
+  -c, --config               Set config file (default: "config.toml")
   -w, --width=INT            Set window width (default: 800)
   -h, --height=INT           Set window height (default: 600)
   -z, --zoom=DOUBLE          Set zoom factor based on screen size (default: 1.1)

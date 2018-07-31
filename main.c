@@ -13,6 +13,7 @@
 
 /* Default config. */
 static char* title = "fractal";
+static char* config_file = "config.toml";
 struct fractal_info default_fi = {
     .generator = GEN_MANDELBROT,
     .max_iter  = 50,
@@ -56,6 +57,8 @@ int main(int argc, char* argv[]) {
     /* CLI arguments. */
     struct config cli_config = {0};
     struct poptOption optionsTable[] = {
+        {"config", 'c', POPT_ARG_STRING|POPT_ARGFLAG_SHOW_DEFAULT,
+            &config_file, 0, "Set config file", ""},
         {"width", 'w', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
             &cli_config.width, 0, "Set window width", NULL},
         {"height", 'h', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
@@ -102,7 +105,7 @@ int main(int argc, char* argv[]) {
     /* Read config from config file. */
     struct config cfg = {0};
     config_init(&cfg);
-    config_read("config.toml", &cfg);
+    config_read(config_file, &cfg);
 
     /* Override config by cli_config, default to default_config. */
     config_fallback(&cfg, default_config);
