@@ -101,7 +101,8 @@ void config_read(const char* filename, struct config* cfg) {
     /* Read config file. */
     FILE* fp;
     if (!(fp = fopen(filename, "r"))) {
-        panicf("Can't open config file `%s`.", filename);
+        fprintf(stderr, "Can't open config file `%s`.\n", filename);
+        return;
     }
     /* Parse config file. */
     toml_table_t* conf;
@@ -109,13 +110,15 @@ void config_read(const char* filename, struct config* cfg) {
     conf = toml_parse_file(fp, errbuf, sizeof(errbuf));
     fclose(fp);
     if (!conf) {
-        panicf("Can't parse config file `%s`: %s.", filename, errbuf);
+        fprintf(stderr, "Can't parse config file `%s`: %s.\n", filename, errbuf);
+        return;
     }
     /* Locate presets array. */
     toml_array_t* presets;
     if (!(presets = toml_array_in(conf, "presets"))) {
         toml_free(conf);
-        panicf("Can't find `presets` table in config file `%s`.", filename);
+        fprintf(stderr, "Can't find `presets` table in config file `%s`.\n", filename);
+        return;
     }
     /* Iterate presets array. */
     toml_table_t* preset;
@@ -123,7 +126,8 @@ void config_read(const char* filename, struct config* cfg) {
         struct fractal_info* fi = NULL;
         if (!(fi = config_read_preset(preset))) {
             toml_free(conf);
-            panicf("Can't read preset at index %d in config file `%s`.", i, filename);
+            fprintf(stderr, "Can't read preset at index %d in config file `%s`.\n", i, filename);
+            return;
         }
         /* Append fi to cfg->presets. */
         cfg->presetc++;
@@ -144,5 +148,37 @@ void config_clear(struct config* cfg) {
     }
     if (cfg->presets) {
         free(cfg->presets);
+    }
+}
+
+#define SET_IF(property, nil) if (dest->property == nil) { dest->property = src.property; }
+
+void config_fallback(struct config* dest, struct config src) {
+    if (!dest) {
+        return;
+    }
+
+    SET_IF(width,      0);
+    SET_IF(height,     0);
+    SET_IF(zoomf,      0.0);
+    SET_IF(translatef, 0.0);
+    SET_IF(software,   0);
+    SET_IF(max_iter,   0);
+    SET_IF(step,       0);
+    SET_IF(speed,      0.0);
+    SET_IF(speed_step, 0.0);
+
+    if (dest->presetc == 0) {
+        /* Copy presets. */
+        dest->presets = calloc(src.presetc, sizeof(struct fractal_info*));
+        for (size_t i = 0; i < src.presetc; i++) {
+            dest->presets[i] = malloc(sizeof(struct fractal_info));
+            *(dest->presets[i]) = *(src.presets[i]);
+        }
+        dest->presetc = src.presetc;
+        dest->preset = src.preset;
+    }
+    if (dest->preset > dest->presetc) {
+        dest->preset = 0;
     }
 }

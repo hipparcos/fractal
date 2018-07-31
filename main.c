@@ -11,43 +11,58 @@
 #include "panic.h"
 #include "types.h"
 
-/* Config. */
-static char*  title      = "fractal";
-static int    width      = 800;
-static int    height     = 600;
-static double zoomf      = 1.1;
-static double translatef = 0.25;
-static int    software   = 0;
-static int    max_iter   = 50;
-static int    step       = 10;
-static size_t preset     = 0;
-static double speed      = 1.0;
-static double speed_step = 0.33;
+/* Default config. */
+static char* title = "fractal";
+struct fractal_info default_fi = {
+    .generator = GEN_MANDELBROT,
+    .max_iter  = 50,
+    .cx        = -0.7,
+    .cy        = 0.0,
+    .dpp       = 0.0035,
+};
+struct fractal_info *default_presets[] = {
+    &default_fi,
+};
+struct config default_config = {
+    .width      = 800,
+    .height     = 600,
+    .zoomf      = 1.1,
+    .translatef = 0.25,
+    .software   = 0,
+    .max_iter   = 50,
+    .step       = 10,
+    .speed      = 1.0,
+    .speed_step = 0.33,
+    .preset     = 0,
+    .presets    = (struct fractal_info**) &default_presets,
+    .presetc    = sizeof(default_presets)/sizeof(default_presets[0]),
+};
 
 void handle_events(SDL_Window* window, struct renderer* renderer, struct config* cfg,
         struct fractal_info* fi, bool* quit, bool* updt, bool* pause);
 
 int main(int argc, char* argv[]) {
     /* CLI arguments. */
+    struct config cli_config = {0};
     struct poptOption optionsTable[] = {
         {"width", 'w', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
-            &width, 0, "Set window width", NULL},
+            &cli_config.width, 0, "Set window width", NULL},
         {"height", 'h', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
-            &height, 0, "Set window height", NULL},
+            &cli_config.height, 0, "Set window height", NULL},
         {"zoom", 'z', POPT_ARG_DOUBLE|POPT_ARGFLAG_SHOW_DEFAULT,
-            &zoomf, 0, "Set zoom factor based on screen size", NULL},
+            &cli_config.zoomf, 0, "Set zoom factor based on screen size", NULL},
         {"translate", 't', POPT_ARG_DOUBLE|POPT_ARGFLAG_SHOW_DEFAULT,
-            &translatef, 0, "Set translation factor based on screen size", NULL},
+            &cli_config.translatef, 0, "Set translation factor based on screen size", NULL},
         {"iter", 'i', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
-            &max_iter, 'i', "Set max iteration limit", NULL},
+            &cli_config.max_iter, 0, "Set max iteration limit", NULL},
         {"step", '\0', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
-            &step, 0, "Set max iteration (incr|decr)ementation step", NULL},
+            &cli_config.step, 0, "Set max iteration (incr|decr)ementation step", NULL},
         {"generator", 'g', POPT_ARG_STRING,
-            NULL, 'g', "Set fractal generator (default: mandelbrot)", "mandelbrot|julia|juliams"},
+            NULL, 0, "Set fractal generator (default: mandelbrot)", "mandelbrot|julia|juliams"},
         {"speed", '\0', POPT_ARG_DOUBLE|POPT_ARGFLAG_SHOW_DEFAULT,
-            &speed, 's', "Set dynamic fractals rendering speed", NULL},
+            &cli_config.speed, 0, "Set dynamic fractals rendering speed", NULL},
         {"software", 's', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
-            &software, 0, "Use software renderer (hardware renderer by default)", "0|1"},
+            &cli_config.software, 0, "Use software renderer (hardware renderer by default)", "0|1"},
         POPT_AUTOHELP
         POPT_TABLEEND
     };
@@ -55,36 +70,10 @@ int main(int argc, char* argv[]) {
     poptContext optCon = poptGetContext(NULL, argc, (const char**) argv, optionsTable, 0);
     poptSetOtherOptionHelp(optCon, "[OPTIONS]");
 
-    /* Read config. */
-    struct config cfg = {0};
-    config_init(&cfg);
-    config_read("config.toml", &cfg);
-
     /* Custom CLI actions. */
     char c;
-    char* gen;
     while ((c = poptGetNextOpt(optCon)) >= 0) {
         switch (c) {
-            case 'g':
-                gen = poptGetOptArg(optCon);
-                if (strcmp(gen, "julia") == 0) {
-                    preset = 1;
-                } else if (strcmp(gen, "juliams") == 0) {
-                    preset = 4;
-                } else {
-                    preset = 0;
-                }
-                break;
-            case 's':
-                for (size_t i = 0; i < cfg.presetc; i++) {
-                    cfg.presets[i]->speed = speed;
-                }
-                break;
-            case 'i':
-                for (size_t i = 0; i < cfg.presetc; i++) {
-                    cfg.presets[i]->max_iter = max_iter;
-                }
-                break;
             default:
                 poptPrintUsage(optCon, stderr, 0);
                 exit(EXIT_FAILURE);
@@ -99,9 +88,17 @@ int main(int argc, char* argv[]) {
     }
     poptFreeContext(optCon);
 
+    /* Read config from config file. */
+    struct config cfg = {0};
+    config_init(&cfg);
+    config_read("config.toml", &cfg);
+
+    /* Override config by cli_config, default to default_config. */
+    config_fallback(&cfg, default_config);
+
     /* Select renderer. */
     struct renderer renderer;
-    if (software) {
+    if (cfg.software) {
         renderer = sw_renderer;
     } else {
         renderer = hw_renderer;
@@ -112,14 +109,14 @@ int main(int argc, char* argv[]) {
     SDL_Window* window = SDL_CreateWindow(title,
             SDL_WINDOWPOS_UNDEFINED,
             SDL_WINDOWPOS_UNDEFINED,
-            width, height,
+            cfg.width, cfg.height,
             SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
     if (!window) {
         panic("Error: SDL can't open a window.");
     }
     renderer.init(window);
 
-    struct fractal_info fi = *(cfg.presets[preset]);
+    struct fractal_info fi = *(cfg.presets[cfg.preset]);
 
     /* Main loop variables. */
     bool quit = false;
@@ -186,6 +183,7 @@ void handle_events(SDL_Window* window, struct renderer* renderer, struct config*
         struct fractal_info* fi, bool* quit, bool* updt, bool* pause) {
     SDL_Event event;
     static Uint16 mbpx = 0, mbpy = 0, mbrx = 0, mbry = 0;
+    int width, height;
     /* Events */
     while (SDL_PollEvent(&event)) {
         switch(event.type) {
@@ -221,19 +219,19 @@ void handle_events(SDL_Window* window, struct renderer* renderer, struct config*
                         break;
 
                     case SDLK_UP:
-                        fi_translate(fi, window, 0,  translatef);
+                        fi_translate(fi, window, 0,  cfg->translatef);
                         *updt = true;
                         break;
                     case SDLK_DOWN:
-                        fi_translate(fi, window, 0, -translatef);
+                        fi_translate(fi, window, 0, -cfg->translatef);
                         *updt = true;
                         break;
                     case SDLK_RIGHT:
-                        fi_translate(fi, window,  translatef, 0);
+                        fi_translate(fi, window,  cfg->translatef, 0);
                         *updt = true;
                         break;
                     case SDLK_LEFT:
-                        fi_translate(fi, window, -translatef, 0);
+                        fi_translate(fi, window, -cfg->translatef, 0);
                         *updt = true;
                         break;
 
@@ -242,9 +240,9 @@ void handle_events(SDL_Window* window, struct renderer* renderer, struct config*
                     case SDLK_KP_PLUS:
                         if((event.key.keysym.mod & KMOD_LCTRL) == KMOD_LCTRL ||
                                 (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
-                            fi_zoom(fi, zoomf);
+                            fi_zoom(fi, cfg->zoomf);
                         } else {
-                            fi_max_iter_incr(fi, step);
+                            fi_max_iter_incr(fi, cfg->step);
                         }
                         *updt = true;
                         break;
@@ -253,32 +251,32 @@ void handle_events(SDL_Window* window, struct renderer* renderer, struct config*
                     case SDLK_KP_MINUS:
                         if((event.key.keysym.mod & KMOD_LCTRL) == KMOD_LCTRL ||
                                 (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
-                            fi_zoom(fi, 1/zoomf);
+                            fi_zoom(fi, 1/cfg->zoomf);
                         } else {
-                            fi_max_iter_decr(fi, step);
+                            fi_max_iter_decr(fi, cfg->step);
                         }
                         *updt = true;
                         break;
 
                     case SDLK_a:
-                        fi->speed += speed_step;
+                        fi->speed += cfg->speed_step;
                         *updt = true;
                         *pause = false;
                         break;
                     case SDLK_d:
-                        fi->speed -= speed_step;
+                        fi->speed -= cfg->speed_step;
                         *updt = true;
                         *pause = false;
                         break;
 
                         /* Switch. */
                     case SDLK_s:
-                        preset += 1;
-                        preset %= cfg->presetc;
+                        cfg->preset += 1;
+                        cfg->preset %= cfg->presetc;
                         *pause = false;
                         /* Reset. */
                     case SDLK_r:
-                        *fi = *cfg->presets[preset];
+                        *fi = *cfg->presets[cfg->preset];
                         *updt = true;
                         break;
                 }
