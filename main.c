@@ -38,8 +38,17 @@ struct config default_config = {
     .presetc    = sizeof(default_presets)/sizeof(default_presets[0]),
 };
 
-void handle_events(SDL_Window* window, struct renderer* renderer, struct config* cfg,
-        struct fractal_info* fi, bool* quit, bool* updt, bool* pause);
+struct state {
+    SDL_Window*          window;
+    struct renderer*     renderer;
+    struct config*       cfg;
+    struct fractal_info  fi;
+    bool quit;
+    bool updt;
+    bool pause;
+};
+
+void handle_events(struct state* state);
 
 int main(int argc, char* argv[]) {
     /* CLI arguments. */
@@ -117,12 +126,16 @@ int main(int argc, char* argv[]) {
     }
     renderer.init(window);
 
-    struct fractal_info fi = *(cfg.presets[cfg.preset]);
-
     /* Main loop variables. */
-    bool quit = false;
-    bool updt = true;
-    bool pause = false;
+    struct state state = {
+        .window=   window,
+        .renderer= &renderer,
+        .cfg=      &cfg,
+        .fi=       *(cfg.presets[cfg.preset]),
+        .quit=  false,
+        .updt=  true,
+        .pause= false,
+    };
     double t  = 0.0;
     double dt = 0.0;
     uint32_t old_time = SDL_GetTicks();
@@ -134,15 +147,15 @@ int main(int argc, char* argv[]) {
     uint32_t fps_display_interval = 1000; // 1 / s.
 
     /* Main loop. */
-    while (!quit) {
+    while (!state.quit) {
         /* Event handling */
-        handle_events(window, &renderer, &cfg, &fi, &quit, &updt, &pause);
+        handle_events(&state);
 
         /* Rendering */
-        if (updt) {
-            renderer.render(fi, t, dt);
-            if (!fi.dynamic) {
-                updt = false;
+        if (state.updt) {
+            renderer.render(state.fi, t, dt);
+            if (!state.fi.dynamic) {
+                state.updt = false;
             }
         }
 
@@ -153,18 +166,18 @@ int main(int argc, char* argv[]) {
         if (frame_time < min_frame_time) {
             SDL_Delay(min_frame_time - frame_time);
         }
-        if (fi.dynamic && !pause) {
+        if (state.fi.dynamic && !state.pause) {
             dt = 0.001 * (double)frame_time;
-            t += dt * fi.speed;
+            t += dt * state.fi.speed;
         }
         frame++;
 
         /* Display fps in console. */
-        if (fi.dynamic && new_time > last_fps_display_time + fps_display_interval) {
+        if (state.fi.dynamic && new_time > last_fps_display_time + fps_display_interval) {
             fprintf(stdout, "> %d frames per second\n", frame - last_fps_display_at_frame);
             last_fps_display_time = new_time;
             last_fps_display_at_frame = frame;
-        } else if (!fi.dynamic) {
+        } else if (!state.fi.dynamic) {
             last_fps_display_time = new_time;
             last_fps_display_at_frame = frame;
         }
@@ -180,24 +193,23 @@ int main(int argc, char* argv[]) {
 }
 
 /** handle_events responds to SDL events. Depends on config variables. */
-void handle_events(SDL_Window* window, struct renderer* renderer, struct config* cfg,
-        struct fractal_info* fi, bool* quit, bool* updt, bool* pause) {
+void handle_events(struct state* state) {
     SDL_Event event;
     static Uint16 mbpx = 0, mbpy = 0, mbrx = 0, mbry = 0;
     int width, height;
+    SDL_GetWindowSize(state->window, &width, &height);
     /* Events */
     while (SDL_PollEvent(&event)) {
         switch(event.type) {
             case SDL_QUIT:
-                *quit = true;
+                state->quit = true;
                 break;
 
             case SDL_WINDOWEVENT:
                 switch (event.window.event) {
                     case SDL_WINDOWEVENT_SIZE_CHANGED:
-                        SDL_GetWindowSize(window, &width, &height);
-                        renderer->resize(width, height);
-                        *updt = true;
+                        state->renderer->resize(width, height);
+                        state->updt = true;
                         break;
                 }
                 break;
@@ -206,34 +218,34 @@ void handle_events(SDL_Window* window, struct renderer* renderer, struct config*
                 switch(event.key.keysym.sym) {
                     case SDLK_q:
                     case SDLK_ESCAPE:
-                        *quit = true;
+                        state->quit = true;
                         break;
 
                     case SDLK_u:
-                        *updt = true;
-                        *pause = false;
+                        state->updt = true;
+                        state->pause = false;
                         break;
 
                     case SDLK_SPACE:
-                        *updt = true;
-                        *pause = !(*pause);
+                        state->updt = true;
+                        state->pause = !(state->pause);
                         break;
 
                     case SDLK_UP:
-                        fi_translate(fi, window, 0,  cfg->translatef);
-                        *updt = true;
+                        fi_translate(&state->fi, state->window, 0,  state->cfg->translatef);
+                        state->updt = true;
                         break;
                     case SDLK_DOWN:
-                        fi_translate(fi, window, 0, -cfg->translatef);
-                        *updt = true;
+                        fi_translate(&state->fi, state->window, 0, -state->cfg->translatef);
+                        state->updt = true;
                         break;
                     case SDLK_RIGHT:
-                        fi_translate(fi, window,  cfg->translatef, 0);
-                        *updt = true;
+                        fi_translate(&state->fi, state->window,  state->cfg->translatef, 0);
+                        state->updt = true;
                         break;
                     case SDLK_LEFT:
-                        fi_translate(fi, window, -cfg->translatef, 0);
-                        *updt = true;
+                        fi_translate(&state->fi, state->window, -state->cfg->translatef, 0);
+                        state->updt = true;
                         break;
 
                     case SDLK_p:
@@ -241,44 +253,44 @@ void handle_events(SDL_Window* window, struct renderer* renderer, struct config*
                     case SDLK_KP_PLUS:
                         if((event.key.keysym.mod & KMOD_LCTRL) == KMOD_LCTRL ||
                                 (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
-                            fi_zoom(fi, cfg->zoomf);
+                            fi_zoom(&state->fi, state->cfg->zoomf);
                         } else {
-                            fi_max_iter_incr(fi, cfg->step);
+                            fi_max_iter_incr(&state->fi, state->cfg->step);
                         }
-                        *updt = true;
+                        state->updt = true;
                         break;
                     case SDLK_m:
                     case SDLK_MINUS:
                     case SDLK_KP_MINUS:
                         if((event.key.keysym.mod & KMOD_LCTRL) == KMOD_LCTRL ||
                                 (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
-                            fi_zoom(fi, 1/cfg->zoomf);
+                            fi_zoom(&state->fi, 1/state->cfg->zoomf);
                         } else {
-                            fi_max_iter_decr(fi, cfg->step);
+                            fi_max_iter_decr(&state->fi, state->cfg->step);
                         }
-                        *updt = true;
+                        state->updt = true;
                         break;
 
                     case SDLK_a:
-                        fi->speed += cfg->speed_step;
-                        *updt = true;
-                        *pause = false;
+                        state->fi.speed += state->cfg->speed_step;
+                        state->updt = true;
+                        state->pause = false;
                         break;
                     case SDLK_d:
-                        fi->speed -= cfg->speed_step;
-                        *updt = true;
-                        *pause = false;
+                        state->fi.speed -= state->cfg->speed_step;
+                        state->updt = true;
+                        state->pause = false;
                         break;
 
                         /* Switch. */
                     case SDLK_s:
-                        cfg->preset += 1;
-                        cfg->preset %= cfg->presetc;
-                        *pause = false;
+                        state->cfg->preset += 1;
+                        state->cfg->preset %= state->cfg->presetc;
+                        state->pause = false;
                         /* Reset. */
                     case SDLK_r:
-                        *fi = *cfg->presets[cfg->preset];
-                        *updt = true;
+                        state->fi = *(state->cfg->presets[state->cfg->preset]);
+                        state->updt = true;
                         break;
                 }
                 break;
@@ -289,7 +301,7 @@ void handle_events(SDL_Window* window, struct renderer* renderer, struct config*
                     case SDL_BUTTON_MIDDLE:
                         mbpx = event.button.x;
                         mbpy = event.button.y;
-                        *updt = false;
+                        state->updt = false;
                         break;
                 }
                 break;
@@ -309,12 +321,12 @@ void handle_events(SDL_Window* window, struct renderer* renderer, struct config*
                             int new_center_y = (mbry + mbpy) / 2;
                             double tx = ((double)(new_center_x) - center_x) / width;
                             double ty = ((double)(new_center_y) - center_y) / height;
-                            fi_translate(fi, window, tx, -ty);
+                            fi_translate(&state->fi, state->window, tx, -ty);
                             /* ...then zoom in. */
                             double fx = width / (double)abs(mbrx - mbpx);
                             double fy = height / (double)abs(mbry - mbpy);
                             double fc = (fx < fy) ? fx : fy;
-                            fi_zoom(fi, fc);
+                            fi_zoom(&state->fi, fc);
                         }
                         break;
                         /* Translation. */
@@ -325,10 +337,10 @@ void handle_events(SDL_Window* window, struct renderer* renderer, struct config*
                         int dy = mbry - mbpy;
                         double tx = (double)(dx) / width;
                         double ty = (double)(dy) / height;
-                        fi_translate(fi, window, tx, -ty);
+                        fi_translate(&state->fi, state->window, tx, -ty);
                         break;
                 }
-                *updt = true;
+                state->updt = true;
                 break;
         }
     }
