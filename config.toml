@@ -1,3 +1,11 @@
+width       = 800
+height      = 600
+zoomf       = 1.1
+transflatef = 0.25
+software    = 0
+speed_step  = 0.33
+preset      = 0
+
 [[presets]]
 name      = "mandelbrot"
 generator = "mandelbrot"

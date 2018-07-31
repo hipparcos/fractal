@@ -89,6 +89,31 @@ static struct fractal_info* config_read_preset(toml_table_t* preset) {
     return fi;
 }
 
+static void read_int(toml_table_t* conf, const char* key, int* dest, int fallback) {
+    const char* val = NULL;
+    if (!((val = toml_raw_in(conf, key))
+            && toml_rtoi(val, (int64_t*)dest) == 0)) {
+        *dest = fallback;
+    }
+}
+static void read_double(toml_table_t* conf, const char* key, double* dest, double fallback) {
+    const char* val = NULL;
+    if (!((val = toml_raw_in(conf, key))
+            && toml_rtod(val, dest) == 0)) {
+        *dest = fallback;
+    }
+}
+
+static void config_read_base(toml_table_t* conf, struct config* cfg) {
+    read_int(conf,    "width",      &(cfg->width),        0);
+    read_int(conf,    "height",     &(cfg->height),       0);
+    read_double(conf, "zoomf",      &(cfg->zoomf),        0.0);
+    read_double(conf, "translatef", &(cfg->translatef),   0.0);
+    read_int(conf,    "software",   &(cfg->software),     0);
+    read_double(conf, "speed_step", &(cfg->speed_step),   0.0);
+    read_int(conf,    "preset",     (int*)&(cfg->preset), 0);
+};
+
 void config_init(struct config* cfg) {
     if (!cfg) {
         return;
@@ -113,6 +138,8 @@ void config_read(const char* filename, struct config* cfg) {
         fprintf(stderr, "Can't parse config file `%s`: %s.\n", filename, errbuf);
         return;
     }
+    /* Read general config infos. */
+    config_read_base(conf, cfg);
     /* Locate presets array. */
     toml_array_t* presets;
     if (!(presets = toml_array_in(conf, "presets"))) {
@@ -177,7 +204,7 @@ void config_fallback(struct config* dest, struct config src) {
         dest->presetc = src.presetc;
         dest->preset = src.preset;
     }
-    if (dest->preset > dest->presetc) {
+    if (dest->preset >= dest->presetc) {
         dest->preset = 0;
     }
 }
@@ -198,7 +225,7 @@ void config_override(struct config* dest, struct config src) {
     OR_IF_SET_IN_src(speed,      0.0);
     OR_IF_SET_IN_src(speed_step, 0.0);
     OR_IF_SET_IN_src(preset,     0);
-    
+
     /* Propagate max_iter & speed to presets. */
     if (src.max_iter != 0) {
         for(size_t i = 0; i < dest->presetc; i++) {
@@ -210,7 +237,7 @@ void config_override(struct config* dest, struct config src) {
             dest->presets[i]->speed = src.speed;
         }
     }
-    if (dest->preset > dest->presetc) {
+    if (dest->preset >= dest->presetc) {
         dest->preset = 0;
     }
 }
