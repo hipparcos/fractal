@@ -6,7 +6,7 @@ A simple fractal drawer written in C (C11 revision) using SDL2 & OpenGL 3.3.
 
 **Output for:**
 ```bash
-./fractal -w 640 -h 480 -g juliams --speed 2.0
+./fractal -w 640 -h 480 --preset 4 --speed 2.0
 ```
 
 ## Getting started
