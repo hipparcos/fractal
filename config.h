@@ -42,5 +42,7 @@ void config_read(const char* filename, struct config* cfg);
 void config_clear(struct config* cfg);
 /** config_fallback set null members of dest to src. */
 void config_fallback(struct config* dest, struct config src);
+/** config_override set non null but distinct memeber of dest to src. */
+void config_override(struct config* dest, struct config src);
 
 #endif

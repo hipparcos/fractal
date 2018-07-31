@@ -151,22 +151,21 @@ void config_clear(struct config* cfg) {
     }
 }
 
-#define SET_IF(property, nil) if (dest->property == nil) { dest->property = src.property; }
-
+#define FB_IF_NOT_SET_IN_dest(property, nil) if (dest->property == nil) { dest->property = src.property; }
 void config_fallback(struct config* dest, struct config src) {
     if (!dest) {
         return;
     }
 
-    SET_IF(width,      0);
-    SET_IF(height,     0);
-    SET_IF(zoomf,      0.0);
-    SET_IF(translatef, 0.0);
-    SET_IF(software,   0);
-    SET_IF(max_iter,   0);
-    SET_IF(step,       0);
-    SET_IF(speed,      0.0);
-    SET_IF(speed_step, 0.0);
+    FB_IF_NOT_SET_IN_dest(width,      0);
+    FB_IF_NOT_SET_IN_dest(height,     0);
+    FB_IF_NOT_SET_IN_dest(zoomf,      0.0);
+    FB_IF_NOT_SET_IN_dest(translatef, 0.0);
+    FB_IF_NOT_SET_IN_dest(software,   0);
+    FB_IF_NOT_SET_IN_dest(max_iter,   0);
+    FB_IF_NOT_SET_IN_dest(step,       0);
+    FB_IF_NOT_SET_IN_dest(speed,      0.0);
+    FB_IF_NOT_SET_IN_dest(speed_step, 0.0);
 
     if (dest->presetc == 0) {
         /* Copy presets. */
@@ -177,6 +176,39 @@ void config_fallback(struct config* dest, struct config src) {
         }
         dest->presetc = src.presetc;
         dest->preset = src.preset;
+    }
+    if (dest->preset > dest->presetc) {
+        dest->preset = 0;
+    }
+}
+
+#define OR_IF_SET_IN_src(property, nil) if (src.property != nil) { dest->property = src.property; }
+void config_override(struct config* dest, struct config src) {
+    if (!dest) {
+        return;
+    }
+
+    OR_IF_SET_IN_src(width,      0);
+    OR_IF_SET_IN_src(height,     0);
+    OR_IF_SET_IN_src(zoomf,      0.0);
+    OR_IF_SET_IN_src(translatef, 0.0);
+    OR_IF_SET_IN_src(software,   0);
+    OR_IF_SET_IN_src(max_iter,   0);
+    OR_IF_SET_IN_src(step,       0);
+    OR_IF_SET_IN_src(speed,      0.0);
+    OR_IF_SET_IN_src(speed_step, 0.0);
+    OR_IF_SET_IN_src(preset,     0);
+    
+    /* Propagate max_iter & speed to presets. */
+    if (src.max_iter != 0) {
+        for(size_t i = 0; i < dest->presetc; i++) {
+            dest->presets[i]->max_iter = src.max_iter;
+        }
+    }
+    if (src.speed != 0) {
+        for(size_t i = 0; i < dest->presetc; i++) {
+            dest->presets[i]->speed = src.speed;
+        }
     }
     if (dest->preset > dest->presetc) {
         dest->preset = 0;

@@ -57,8 +57,8 @@ int main(int argc, char* argv[]) {
             &cli_config.max_iter, 0, "Set max iteration limit", NULL},
         {"step", '\0', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
             &cli_config.step, 0, "Set max iteration (incr|decr)ementation step", NULL},
-        {"generator", 'g', POPT_ARG_STRING,
-            NULL, 0, "Set fractal generator (default: mandelbrot)", "mandelbrot|julia|juliams"},
+        {"generator", 'g', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
+            &cli_config.preset, 0, "Set fractal generator (index of presets)", NULL},
         {"speed", '\0', POPT_ARG_DOUBLE|POPT_ARGFLAG_SHOW_DEFAULT,
             &cli_config.speed, 0, "Set dynamic fractals rendering speed", NULL},
         {"software", 's', POPT_ARG_INT|POPT_ARGFLAG_SHOW_DEFAULT,
@@ -95,6 +95,7 @@ int main(int argc, char* argv[]) {
 
     /* Override config by cli_config, default to default_config. */
     config_fallback(&cfg, default_config);
+    config_override(&cfg, cli_config);
 
     /* Select renderer. */
     struct renderer renderer;
