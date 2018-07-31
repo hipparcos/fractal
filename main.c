@@ -46,6 +46,8 @@ struct state {
     bool quit;
     bool updt;
     bool pause;
+    double t;
+    double dt;
 };
 
 void handle_events(struct state* state);
@@ -135,9 +137,9 @@ int main(int argc, char* argv[]) {
         .quit=  false,
         .updt=  true,
         .pause= false,
+        .t  = 0.0,
+        .dt = 0.0,
     };
-    double t  = 0.0;
-    double dt = 0.0;
     uint32_t old_time = SDL_GetTicks();
     uint32_t min_frame_time = 1000/60; // 60 fps limit.
     uint32_t frame = 0;
@@ -153,7 +155,7 @@ int main(int argc, char* argv[]) {
 
         /* Rendering */
         if (state.updt) {
-            renderer.render(state.fi, t, dt);
+            renderer.render(state.fi, state.t, state.dt);
             if (!state.fi.dynamic) {
                 state.updt = false;
             }
@@ -167,8 +169,8 @@ int main(int argc, char* argv[]) {
             SDL_Delay(min_frame_time - frame_time);
         }
         if (state.fi.dynamic && !state.pause) {
-            dt = 0.001 * (double)frame_time;
-            t += dt * state.fi.speed;
+            state.dt = 0.001 * (double)frame_time;
+            state.t += state.dt * state.fi.speed;
         }
         frame++;
 
@@ -290,6 +292,8 @@ void handle_events(struct state* state) {
                         /* Reset. */
                     case SDLK_r:
                         state->fi = *(state->cfg->presets[state->cfg->preset]);
+                        state->t  = 0.0;
+                        state->dt = 0.0;
                         state->updt = true;
                         break;
                 }
