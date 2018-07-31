@@ -66,15 +66,15 @@ d               decrease speed
 ```
 Usage: fractal [OPTIONS]
   -c, --config               Set config file (default: "config.toml")
-  -w, --width=INT            Set window width (default: 800)
-  -h, --height=INT           Set window height (default: 600)
-  -z, --zoom=DOUBLE          Set zoom factor based on screen size (default: 1.1)
-  -t, --translate=DOUBLE     Set translation factor based on screen size (default: 0.25)
-  -i, --iter=INT             Set max iteration limit (default: 50)
-      --step=INT             Set max iteration (incr|decr)ementation step (default: 10)
+  -w, --width=INT            Set window width in pixels
+  -h, --height=INT           Set window height in pixels
+  -z, --zoom=DOUBLE          Set zoom factor (density per pixel multiplier)
+  -t, --translate=DOUBLE     Set translation factor (screen size multiplier)
+  -i, --iter=INT             Set max iteration limit
+      --step=INT             Set max iteration (incr|decr)ementation step
   -p, --preset=INT           Set fractal preset to use (index of presets, from 0)
-      --speed=DOUBLE         Set dynamic fractals rendering speed (default: 1)
-  -s, --software=0|1         Use software renderer (hardware renderer by default) (default: 0)
+      --speed=DOUBLE         Set dynamic fractals rendering speed
+  -s, --software=0|1         Use software renderer (hardware renderer by default)
 
 Help options:
   -?, --help                 Show this help message
