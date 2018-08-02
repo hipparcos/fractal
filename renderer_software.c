@@ -98,6 +98,7 @@ struct rdr_context {
 /** worker takes a rdr_context* and returns NULL. */
 typedef void* (*worker)(void*);
 
+/** rdr_sw_line_worker renders a contiguous set of lines to buffer. */
 static void* rdr_sw_line_worker(void* arg) {
     struct rdr_context* ctx = (struct rdr_context*) arg;
 
@@ -133,6 +134,64 @@ static void* rdr_sw_line_worker(void* arg) {
             uint8_t color = (uint8_t)(ratio * 0xff);
             *(pixels++) = SDL_MapRGB(format, color, color, color);
         }
+    }
+    return NULL;
+}
+
+/** rdr_sw_area_worker renders rectangles to buffer.
+ ** Better load distribution than rdr_sw_line_worker.
+ ** Example: 4 workers, the second one renders
+ **     .x..
+ **     ..x.
+ **     ...x
+ **     x...
+ */
+static void* rdr_sw_area_worker(void* arg) {
+    struct rdr_context* ctx = (struct rdr_context*) arg;
+
+    /* Proxy variables. */
+    int width  = ctx->buf->w;
+    int height = ctx->buf->h;
+    struct fractal_info fi = ctx->fi;
+    fractal_generator gen = rdr_sw_get_generator(ctx->fi.generator);
+    /* Worker specific. */
+    int recw = width / ctx->workerc;
+    int rech = height / ctx->workerc;
+    /* Painting variables. */
+    uint32_t* pixels = ctx->buf->pixels;
+    SDL_PixelFormat* format = ctx->buf->format;
+
+    /* Calculate iteration per pixel. */
+    int recoffset = ctx->workeri;
+    int maxoffset = ctx->workerc - 1;
+    for (int reci = 0; reci < ctx->workerc; reci++) {
+        int xi = recoffset * recw;
+        int yi = reci * rech;
+        int xm = (xi + recw < width) ? xi + recw : width;
+        if (recoffset == maxoffset) xm = width;
+        int ym = (yi + rech < height) ? yi + rech : height;
+        if (reci == maxoffset) ym = height;
+        for (int y = yi; y < ym; y++) {
+            for (int x = xi; x < xm; x++) {
+                // Calculate a pixel.
+                int iter = gen(
+                            fi.cx + fi.dpp * (x - width/2), // ix.
+                            fi.cy + fi.dpp * (y - height/2), // iy.
+                            fi.jx,
+                            fi.jy,
+                            fi.n,
+                            fi.max_iter);
+
+                if (iter == fi.max_iter) {
+                    iter = 0;
+                }
+
+                double ratio = (double)(iter) / fi.max_iter;
+                uint8_t color = (uint8_t)(ratio * 0xff);
+                *(pixels + x + y * width) = SDL_MapRGB(format, color, color, color);
+            }
+        }
+        recoffset = (recoffset + 1) % ctx->workerc;
     }
     return NULL;
 }
@@ -173,7 +232,7 @@ static void rdr_sw_update(SDL_Surface* buf, struct fractal_info fi, double t, wo
 void rdr_sw_render(struct fractal_info fi, double t, double dt) {
     (void)dt;
     /* Update main memory buffer. */
-    rdr_sw_update(fractal.buffer, fi, t, rdr_sw_line_worker);
+    rdr_sw_update(fractal.buffer, fi, t, rdr_sw_area_worker);
     /* Update GPU memory texture. */
     uint32_t* pixels; int pitch;
     SDL_LockTexture(fractal.texture, NULL, (void**)&pixels, &pitch);
