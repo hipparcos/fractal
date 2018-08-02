@@ -11,7 +11,6 @@
 #include "generator/julia_multiset.h"
 #include "generator/mandelbrot.h"
 
-#define BPP 32
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #define M_PI_2 1.57079632679489661923
@@ -23,12 +22,7 @@ static struct {
     SDL_Renderer* renderer;
     SDL_Texture* texture;
     SDL_Surface* buffer;
-    fractal_generator generator;
-    double cx, cy;
-    double dpp;
-} fractal = {
-    .cx= .0, .cy= .0, .dpp= 0.01, // default values.
-};
+} fractal;
 
 void rdr_sw_init(SDL_Window* window) {
     int width, height;
@@ -87,7 +81,7 @@ void rdr_sw_resize(int width, int height) {
     if (fractal.buffer) {
         SDL_FreeSurface(fractal.buffer);
     }
-    fractal.buffer = SDL_CreateRGBSurface(0, width, height, BPP, 0, 0, 0, 0);
+    fractal.buffer = SDL_CreateRGBSurface(0, width, height, 32, 0, 0, 0, 0);
     if (!fractal.buffer) {
         rdr_sw_free();
         panic("Error: SDL can't create a surface.");
@@ -95,49 +89,56 @@ void rdr_sw_resize(int width, int height) {
 }
 
 struct rdr_context {
+    SDL_Surface* buf;
     struct fractal_info fi;
-    fractal_generator gen;
-    int first_line;
-    int last_line;
+    int workeri; // worker index.
+    int workerc; // worker count.
 };
 
-static void* rdr_worker(void* arg) {
+/** worker takes a rdr_context* and returns NULL. */
+typedef void* (*worker)(void*);
+
+static void* rdr_sw_line_worker(void* arg) {
     struct rdr_context* ctx = (struct rdr_context*) arg;
 
-    for(int y = ctx->first_line; y < ctx->last_line; y++) {
-        for(int x = 0; x < fractal.buffer->w; x++) {
-            // Calculate a pixel.
-            int iter = ctx->gen(
-                        ctx->fi.cx + ctx->fi.dpp * (x - fractal.buffer->w/2), // ix.
-                        ctx->fi.cy + ctx->fi.dpp * (y - fractal.buffer->h/2), // iy.
-                        ctx->fi.jx,
-                        ctx->fi.jy,
-                        ctx->fi.n,
-                        ctx->fi.max_iter);
+    /* Proxy variables. */
+    int width  = ctx->buf->w;
+    int height = ctx->buf->h;
+    struct fractal_info fi = ctx->fi;
+    fractal_generator gen = rdr_sw_get_generator(ctx->fi.generator);
+    /* Worker specific. */
+    int start_line = (ctx->workeri * height) / ctx->workerc;
+    int lines_per_wk = height / ctx->workerc;
+    /* Painting variables. */
+    uint32_t* pixels = (uint32_t*)ctx->buf->pixels + start_line * width;
+    SDL_PixelFormat* format = ctx->buf->format;
 
-            if (iter == ctx->fi.max_iter) {
+    /* Calculate iteration per pixel. */
+    for(int y = start_line; y < start_line + lines_per_wk; y++) {
+        for(int x = 0; x < width; x++) {
+            // Calculate a pixel.
+            int iter = gen(
+                        fi.cx + fi.dpp * (x - width/2), // ix.
+                        fi.cy + fi.dpp * (y - height/2), // iy.
+                        fi.jx,
+                        fi.jy,
+                        fi.n,
+                        fi.max_iter);
+
+            if (iter == fi.max_iter) {
                 iter = 0;
             }
 
-            /* Color */
-            double ratio = (double)(iter) / (double)(ctx->fi.max_iter);
-            int color = floor((double)(0xff) * ratio);
-            int red   = color;
-            int green = color;
-            int blue  = color;
-
-            /* Set pixel color. */
-            *((Uint32*)(fractal.buffer->pixels) + x + y * fractal.buffer->w)
-                = SDL_MapRGB(fractal.buffer->format, red, green, blue);
+            double ratio = (double)(iter) / fi.max_iter;
+            uint8_t color = (uint8_t)(ratio * 0xff);
+            *(pixels++) = SDL_MapRGB(format, color, color, color);
         }
     }
     return NULL;
 }
 
-static void rdr_sw_update(struct fractal_info fi, fractal_generator gen, double t, double dt) {
-    (void)dt;
-    /* SDL_FillRect(fractal.buffer, NULL, SDL_MapRGB(fractal.buffer->format, 0, 0, 0)); */
-
+static void rdr_sw_update(SDL_Surface* buf, struct fractal_info fi, double t, worker wk) {
+    /* Set constant for dynamic fractals. */
     if (fi.dynamic) {
         double tp = t / (2 * M_PI_2);
         double ct = cos(tp);
@@ -145,37 +146,40 @@ static void rdr_sw_update(struct fractal_info fi, fractal_generator gen, double 
         fi.jx *= ct;
         fi.jy *= st;
     }
-
-    size_t num_threads = (size_t)get_nprocs();
-    pthread_t threads[num_threads];
-    struct rdr_context ctx[num_threads];
-    int step = fractal.buffer->h / num_threads;
-
+    /* Thread pool. */
+    size_t workerc = (size_t)get_nprocs();
+    pthread_t threads[workerc];
+    struct rdr_context ctx[workerc];
     /* Launch threads. */
-    for (size_t t = 0; t < num_threads; t++) {
-        int last = (t+1) * step;
-        if (last > fractal.buffer->h) last = fractal.buffer->h;
-        ctx[t].fi= fi;
-        ctx[t].gen= gen;
-        ctx[t].first_line= t * step;
-        ctx[t].last_line= last;
-        if (0 != (pthread_create(&threads[t], NULL, rdr_worker, &ctx[t]))) {
+    for (size_t t = 0; t < workerc; t++) {
+        /* Create context for the thread t. */
+        ctx[t].buf = buf;
+        ctx[t].fi = fi;
+        ctx[t].workeri = t;
+        ctx[t].workerc = workerc;
+        /* Launch worker execution. */
+        if (0 != (pthread_create(&threads[t], NULL, wk, &ctx[t]))) {
             panic("Error while launching thread.");
         }
     }
     /* Waiting for all threads to finish. */
-    for (size_t t = 0; t < num_threads; t++) {
+    for (size_t t = 0; t < workerc; t++) {
         if (0 != (pthread_join(threads[t], NULL))) {
             panic("Error while joining thread.");
         }
     }
-
-    Uint32* pixels = (Uint32*) fractal.buffer->pixels;
-    SDL_UpdateTexture(fractal.texture, NULL, pixels, fractal.buffer->w * sizeof(Uint32));
 }
 
 void rdr_sw_render(struct fractal_info fi, double t, double dt) {
-    rdr_sw_update(fi, rdr_sw_get_generator(fi.generator), t, dt);
+    (void)dt;
+    /* Update main memory buffer. */
+    rdr_sw_update(fractal.buffer, fi, t, rdr_sw_line_worker);
+    /* Update GPU memory texture. */
+    uint32_t* pixels; int pitch;
+    SDL_LockTexture(fractal.texture, NULL, (void**)&pixels, &pitch);
+    memcpy(pixels, fractal.buffer->pixels, fractal.buffer->h * pitch);
+    SDL_UnlockTexture(fractal.texture);
+    /* Render. */
     SDL_RenderClear(fractal.renderer);
     SDL_SetRenderDrawColor(fractal.renderer, 0, 0, 0, 255);
     SDL_RenderCopy(fractal.renderer, fractal.texture, NULL, NULL);
