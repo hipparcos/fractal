@@ -84,5 +84,5 @@ Help options:
 ## TODO
 
 - [ ] Add a GUI (vurtun/nuklear);
-- [ ] Use libdill to make software renderer concurrent;
+- [x] Make software renderer concurrent (pthread);
 - [x] Store presets in a config file (cktan/tomlc99).

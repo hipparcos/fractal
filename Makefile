@@ -9,9 +9,11 @@ deps=$(addprefix $(build_dir)/,$(sources:%.c=%.d))
 
 CC=gcc
 SHELL:=/bin/bash
-DEBUG?=-ggdb3 -O0
+# DEBUG?=-ggdb3 -O0
+DEBUG?=-O2
 CFLAGS:=-Wall -std=c11 $(DEBUG)
-LDFLAGS:=-Wall -zmuldefs -lpopt -lSDL2 -lGL -lGLEW -lm
+LDFLAGS:=-Wall -zmuldefs
+LDLIBS:=-lpopt -lSDL2 -lGL -lGLEW -lm -lpthread
 VGFLAGS?=\
 	--quiet --leak-check=full --show-leak-kinds=all \
 	--track-origins=yes --error-exitcode=1 --error-limit=no \

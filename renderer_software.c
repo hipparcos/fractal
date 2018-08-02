@@ -2,6 +2,8 @@
 
 #include <limits.h>
 #include <math.h>
+#include <pthread.h>
+#include <sys/sysinfo.h>
 #include <SDL2/SDL.h>
 
 #include "panic.h"
@@ -92,9 +94,49 @@ void rdr_sw_resize(int width, int height) {
     }
 }
 
+struct rdr_context {
+    struct fractal_info fi;
+    fractal_generator gen;
+    int first_line;
+    int last_line;
+};
+
+static void* rdr_worker(void* arg) {
+    struct rdr_context* ctx = (struct rdr_context*) arg;
+
+    for(int y = ctx->first_line; y < ctx->last_line; y++) {
+        for(int x = 0; x < fractal.buffer->w; x++) {
+            // Calculate a pixel.
+            int iter = ctx->gen(
+                        ctx->fi.cx + ctx->fi.dpp * (x - fractal.buffer->w/2), // ix.
+                        ctx->fi.cy + ctx->fi.dpp * (y - fractal.buffer->h/2), // iy.
+                        ctx->fi.jx,
+                        ctx->fi.jy,
+                        ctx->fi.n,
+                        ctx->fi.max_iter);
+
+            if (iter == ctx->fi.max_iter) {
+                iter = 0;
+            }
+
+            /* Color */
+            double ratio = (double)(iter) / (double)(ctx->fi.max_iter);
+            int color = floor((double)(0xff) * ratio);
+            int red   = color;
+            int green = color;
+            int blue  = color;
+
+            /* Set pixel color. */
+            *((Uint32*)(fractal.buffer->pixels) + x + y * fractal.buffer->w)
+                = SDL_MapRGB(fractal.buffer->format, red, green, blue);
+        }
+    }
+    return NULL;
+}
+
 static void rdr_sw_update(struct fractal_info fi, fractal_generator gen, double t, double dt) {
     (void)dt;
-    SDL_FillRect(fractal.buffer, NULL, SDL_MapRGB(fractal.buffer->format, 0, 0, 0));
+    /* SDL_FillRect(fractal.buffer, NULL, SDL_MapRGB(fractal.buffer->format, 0, 0, 0)); */
 
     if (fi.dynamic) {
         double tp = t / (2 * M_PI_2);
@@ -104,31 +146,27 @@ static void rdr_sw_update(struct fractal_info fi, fractal_generator gen, double 
         fi.jy *= st;
     }
 
-    for(int y = 0; y < fractal.buffer->h; y++) {
-        for(int x = 0; x < fractal.buffer->w; x++) {
-            // Calculate a pixel.
-            int iter = gen(
-                        fi.cx + fi.dpp * (x - fractal.buffer->w/2), // ix.
-                        fi.cy + fi.dpp * (y - fractal.buffer->h/2), // iy.
-                        fi.jx,
-                        fi.jy,
-                        fi.n,
-                        fi.max_iter);
+    size_t num_threads = (size_t)get_nprocs();
+    pthread_t threads[num_threads];
+    struct rdr_context ctx[num_threads];
+    int step = fractal.buffer->h / num_threads;
 
-            if (iter == fi.max_iter) {
-                iter = 0;
-            }
-
-            /* Color */
-            double ratio = (double)(iter) / (double)(fi.max_iter);
-            int color = floor((double)(0xff) * ratio);
-            int red   = color;
-            int green = color;
-            int blue  = color;
-
-            /* Set pixel color. */
-            *((Uint32*)(fractal.buffer->pixels) + x + y * fractal.buffer->w)
-                = SDL_MapRGB(fractal.buffer->format, red, green, blue);
+    /* Launch threads. */
+    for (size_t t = 0; t < num_threads; t++) {
+        int last = (t+1) * step;
+        if (last > fractal.buffer->h) last = fractal.buffer->h;
+        ctx[t].fi= fi;
+        ctx[t].gen= gen;
+        ctx[t].first_line= t * step;
+        ctx[t].last_line= last;
+        if (0 != (pthread_create(&threads[t], NULL, rdr_worker, &ctx[t]))) {
+            panic("Error while launching thread.");
+        }
+    }
+    /* Waiting for all threads to finish. */
+    for (size_t t = 0; t < num_threads; t++) {
+        if (0 != (pthread_join(threads[t], NULL))) {
+            panic("Error while joining thread.");
         }
     }
 
