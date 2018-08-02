@@ -3,15 +3,17 @@ sources=main.c config.c types.c panic.c renderer_software.c renderer_hardware.c 
 		generator/julia_multiset.c generator/julia.c generator/mandelbrot.c \
 		vendor/tomlc99/toml.c
 build_dir:=build
+benchmark_file:=benchmarks.mk
 
 objects=$(addprefix $(build_dir)/,$(sources:%.c=%.o))
+objects_no_main=$(addprefix $(build_dir)/,$(filter-out main.o,$(sources:%.c=%.o)))
 deps=$(addprefix $(build_dir)/,$(sources:%.c=%.d))
 
 CC=gcc
 SHELL:=/bin/bash
 # DEBUG?=-ggdb3 -O0
 DEBUG?=-O2
-CFLAGS:=-Wall -std=c11 $(DEBUG)
+CFLAGS:=-Wall -Wno-unused-function -std=c11 $(DEBUG)
 LDFLAGS:=-Wall -zmuldefs
 LDLIBS:=-lpopt -lSDL2 -lGL -lGLEW -lm -lpthread
 VGFLAGS?=\
@@ -26,11 +28,14 @@ all: build
 
 build: $(out)
 
-clean:
+clean::
 	rm -f $(objects) $(deps) tags $(out)
 
 leakcheck: $(out)
 	valgrind $(VGFLAGS) ./$^
+
+# Benchmarks targets
+include $(benchmark_file)
 
 # Build executable.
 $(out): $(objects)
