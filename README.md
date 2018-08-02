@@ -19,6 +19,7 @@ Building:
 - GNU Make (make);
 - popt library: CLI flags parsing;
 - SDL2: windowing + software rendering;
+- POSIX threads (pthreads): concurrent software rendering;
 - OpenGL 3.3: hardware rendering;
 - GLEW: OpenGL extension loader.
 
