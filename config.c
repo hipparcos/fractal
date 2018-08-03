@@ -84,6 +84,7 @@ static void config_read_base(toml_table_t* conf, struct config* cfg) {
     read_double(conf, "zoomf",      &(cfg->zoomf),        0.0);
     read_double(conf, "translatef", &(cfg->translatef),   0.0);
     read_int(conf,    "software",   &(cfg->software),     0);
+    read_int(conf,    "iter_step",  &(cfg->iter_step),    0.0);
     read_double(conf, "speed_step", &(cfg->speed_step),   0.0);
     read_int(conf,    "preset",     (int*)&(cfg->preset), 0);
 };
@@ -164,7 +165,7 @@ void config_fallback(struct config* dest, struct config src) {
     FB_IF_NOT_SET_IN_dest(translatef, 0.0);
     FB_IF_NOT_SET_IN_dest(software,   0);
     FB_IF_NOT_SET_IN_dest(max_iter,   0);
-    FB_IF_NOT_SET_IN_dest(step,       0);
+    FB_IF_NOT_SET_IN_dest(iter_step,  0);
     FB_IF_NOT_SET_IN_dest(speed,      0.0);
     FB_IF_NOT_SET_IN_dest(speed_step, 0.0);
 
@@ -195,7 +196,7 @@ void config_override(struct config* dest, struct config src) {
     OR_IF_SET_IN_src(translatef, 0.0);
     OR_IF_SET_IN_src(software,   0);
     OR_IF_SET_IN_src(max_iter,   0);
-    OR_IF_SET_IN_src(step,       0);
+    OR_IF_SET_IN_src(iter_step,  0);
     OR_IF_SET_IN_src(speed,      0.0);
     OR_IF_SET_IN_src(speed_step, 0.0);
     OR_IF_SET_IN_src(preset,     0);

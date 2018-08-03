@@ -18,8 +18,8 @@ struct config {
     int software;
     /** max iteration override. */
     int max_iter;
-    /** step to increase/decrease max_iter. */
-    int step;
+    /** iter_step to increase/decrease max_iter. */
+    int iter_step;
     /** spped multiplier (valid only with dynamic rendering). */
     double speed;
     /** speed_step multiplier to increase/descrease speed. */

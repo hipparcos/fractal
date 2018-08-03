@@ -31,7 +31,7 @@ struct config default_config = {
     .translatef = 0.25,
     .software   = 0,
     .max_iter   = 50,
-    .step       = 10,
+    .iter_step  = 10,
     .speed      = 1.0,
     .speed_step = 0.33,
     .preset     = 0,
@@ -70,7 +70,7 @@ int main(int argc, char* argv[]) {
         {"iter", 'i', POPT_ARG_INT,
             &cli_config.max_iter, 0, "Set max iteration limit", NULL},
         {"step", '\0', POPT_ARG_INT,
-            &cli_config.step, 0, "Set max iteration (incr|decr)ementation step", NULL},
+            &cli_config.iter_step, 0, "Set max iteration (incr|decr)ementation step", NULL},
         {"preset", 'p', POPT_ARG_INT,
             &cli_config.preset, 0, "Set fractal preset to use (index of presets, from 0)", NULL},
         {"speed", '\0', POPT_ARG_DOUBLE,
@@ -260,7 +260,7 @@ void handle_events(struct state* state) {
                                 (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
                             fi_zoom(&state->fi, state->cfg->zoomf);
                         } else {
-                            fi_max_iter_incr(&state->fi, state->cfg->step);
+                            fi_max_iter_incr(&state->fi, state->cfg->iter_step);
                         }
                         state->updt = true;
                         break;
@@ -271,7 +271,7 @@ void handle_events(struct state* state) {
                                 (event.key.keysym.mod & KMOD_RCTRL) == KMOD_RCTRL) {
                             fi_zoom(&state->fi, 1/state->cfg->zoomf);
                         } else {
-                            fi_max_iter_decr(&state->fi, state->cfg->step);
+                            fi_max_iter_decr(&state->fi, state->cfg->iter_step);
                         }
                         state->updt = true;
                         break;
