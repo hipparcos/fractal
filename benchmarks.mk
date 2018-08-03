@@ -14,7 +14,7 @@ $(benchmarks): %: benchmark_clean $(build_dir)/%
 
 $(benchmarks_built): %: %.o $(objects_no_main)
 	@$(CC) $(LDFLAGS) $(LDLIBS) $^ -o $@
-	time ./$@
+	@./$@
 	@echo ""
 
 
@@ -22,7 +22,7 @@ $(build_dir)/benchmark_%.o: benchmark_%.c $$(@D)/.f
 	@$(CC) $(CFLAGS) $(BENCH_CFLAGS) -c -o $@ $<
 
 benchmark_clean:
-	rm -f $(benchmarks_obj) $(benchmarks_built)
+	@rm -f $(benchmarks_obj) $(benchmarks_built)
 
 clean:: benchmark_clean
 

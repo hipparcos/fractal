@@ -16,11 +16,15 @@
 #define _STRINGIFY(str) #str
 #define STRINGIFY(str) _STRINGIFY(str)
 
+#define BENCHMARK_IMPL
+#include "benchmark.h"
+
 #define benchmark_worker(wk, runs, width, height) \
-    printf("Benchmarking %s\n", STRINGIFY(wk)); \
-    printf("  definition: %dx%d\n", width, height); \
-    printf("  runs: %d\n", runs); \
-    _benchmark_worker(wk, runs, width, height);
+    benchmark_display_banner(STRINGIFY(wk), runs, "definition "STRINGIFY(width)"x"STRINGIFY(HEIGHT)); \
+    long long startt = benchmark_get_time_ns(); \
+    _benchmark_worker(wk, runs, width, height); \
+    long long endtt = benchmark_get_time_ns(); \
+    benchmark_display_results(startt, endtt, runs);
 
 void _benchmark_worker(worker wk, int runs, int width, int height) {
     /* Init */

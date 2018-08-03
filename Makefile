@@ -13,7 +13,7 @@ CC=gcc
 SHELL:=/bin/bash
 # DEBUG?=-ggdb3 -O0
 DEBUG?=-O2
-CFLAGS:=-Wall -Wno-unused-function -std=c11 $(DEBUG)
+CFLAGS:=-Wall -Wno-unused-function -std=gnu11 $(DEBUG)
 LDFLAGS:=-Wall -zmuldefs
 LDLIBS:=-lpopt -lSDL2 -lGL -lGLEW -lm -lpthread
 VGFLAGS?=\
