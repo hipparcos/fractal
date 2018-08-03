@@ -213,6 +213,7 @@ void handle_events(struct state* state) {
             case SDL_WINDOWEVENT:
                 switch (event.window.event) {
                     case SDL_WINDOWEVENT_SIZE_CHANGED:
+                        SDL_GetWindowSize(state->window, &width, &height);
                         state->renderer->resize(width, height);
                         state->updt = true;
                         break;
