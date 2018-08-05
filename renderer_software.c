@@ -4,6 +4,7 @@
 #include <math.h>
 #include <pthread.h>
 #include <sys/sysinfo.h>
+#include <time.h>
 #include <SDL2/SDL.h>
 
 #include "panic.h"
@@ -287,6 +288,11 @@ static void rdr_sw_update(SDL_Surface* buf, struct fractal_info fi, double t) {
         /* Signal execution to worker. */
         pthread_cond_signal(&worker_ctx[w].cond);
     }
+    struct timespec req;
+    req.tv_sec = 0;
+    req.tv_nsec = 1000;
+    struct timespec rem;
+    nanosleep(&req, &rem);
     /* Wait for all workers to finish. */
     for (size_t w = 0; w < workerc; w++) {
         if (0 != (ret = pthread_mutex_lock(&worker_ctx[w].mutex))) {
