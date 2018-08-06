@@ -31,14 +31,17 @@ struct rdr_context {
     struct fractal_info fi;
     int workeri; // worker index.
     int workerc; // worker count.
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
+    bool done;
 };
 
 /* Workers */
 static pthread_t* workers;
 static size_t workerc;
 static struct rdr_context* worker_ctx;
+static pthread_mutex_t worker_mutex_work;
+static pthread_cond_t worker_cond_work;
+static pthread_mutex_t worker_mutex_done;
+static pthread_cond_t worker_cond_done;
 
 /** worker takes a rdr_context* and returns NULL. */
 typedef void* (*worker)(void*);
@@ -51,13 +54,16 @@ static void rdr_sw_threads_init(worker wk) {
     workerc = (size_t)get_nprocs();
     workers = calloc(workerc, sizeof(pthread_t));
     worker_ctx = calloc(workerc, sizeof(struct rdr_context));
+    pthread_mutex_init(&worker_mutex_work, NULL);
+    pthread_cond_init(&worker_cond_work, NULL);
+    pthread_mutex_init(&worker_mutex_done, NULL);
+    pthread_cond_init(&worker_cond_done, NULL);
     for (size_t w = 0; w < workerc; w++) {
         /* Worker argument */
         worker_ctx[w].buf = NULL;
         worker_ctx[w].workeri = w;
         worker_ctx[w].workerc = workerc;
-        pthread_mutex_init(&worker_ctx[w].mutex, NULL);
-        pthread_cond_init(&worker_ctx[w].cond, NULL);
+        worker_ctx[w].done = false;
         /* Launch worker */
         if (0 != (pthread_create(&workers[w], NULL, wk, &worker_ctx[w]))) {
             panic("Error while launching thread.");
@@ -68,9 +74,11 @@ static void rdr_sw_threads_init(worker wk) {
 static void rdr_sw_threads_free(void) {
     for (size_t w = 0; w < workerc; w++) {
         pthread_cancel(workers[w]);
-        pthread_mutex_destroy(&worker_ctx[w].mutex);
-        pthread_cond_destroy(&worker_ctx[w].cond);
     }
+    pthread_mutex_destroy(&worker_mutex_work);
+    pthread_cond_destroy(&worker_cond_work);
+    pthread_mutex_destroy(&worker_mutex_done);
+    pthread_cond_destroy(&worker_cond_done);
     free(workers);
     free(worker_ctx);
 }
@@ -145,15 +153,12 @@ void rdr_sw_resize(int width, int height) {
 /** rdr_sw_line_worker renders a contiguous set of lines to buffer. */
 static void* rdr_sw_line_worker(void* arg) {
     struct rdr_context* ctx = (struct rdr_context*) arg;
-    int ret = 0;
     while (true) {
         /* Wait for work order to be given. */
-        if (0 != (ret = pthread_mutex_lock(&ctx->mutex))) {
-            panicf("Can't lock work mutex in worker. ret: %d", ret);
-        }
-        if (0 != (ret = pthread_cond_wait(&ctx->cond, &ctx->mutex))) {
-            panicf("Can't wait on work cond in worker. ret: %d", ret);
-        }
+        pthread_mutex_lock(&worker_mutex_work);
+        pthread_cond_wait(&worker_cond_work, &worker_mutex_work);
+        ctx->done = false;
+        pthread_mutex_unlock(&worker_mutex_work);
         /* Proxy variables. */
         int width  = ctx->buf->w;
         int height = ctx->buf->h;
@@ -187,9 +192,10 @@ static void* rdr_sw_line_worker(void* arg) {
                 *(pixels++) = SDL_MapRGB(format, color, color, color);
             }
         }
-        if (0 != (ret = pthread_mutex_unlock(&ctx->mutex))) {
-            panicf("Can't unlock work mutex in worker. ret: %d", ret);
-        }
+        pthread_mutex_lock(&worker_mutex_done);
+        ctx->done = true;
+        pthread_cond_signal(&worker_cond_done);
+        pthread_mutex_unlock(&worker_mutex_done);
     }
     return NULL;
 }
@@ -204,15 +210,12 @@ static void* rdr_sw_line_worker(void* arg) {
  */
 static void* rdr_sw_area_worker(void* arg) {
     struct rdr_context* ctx = (struct rdr_context*) arg;
-    int ret = 0;
     while (true) {
         /* Wait for work order to be given. */
-        if (0 != (ret = pthread_mutex_lock(&ctx->mutex))) {
-            panicf("Can't lock work mutex in worker. ret: %d", ret);
-        }
-        if (0 != (ret = pthread_cond_wait(&ctx->cond, &ctx->mutex))) {
-            panicf("Can't wait on work cond in worker. ret: %d", ret);
-        }
+        pthread_mutex_lock(&worker_mutex_work);
+        pthread_cond_wait(&worker_cond_work, &worker_mutex_work);
+        ctx->done = false;
+        pthread_mutex_unlock(&worker_mutex_work);
         /* Proxy variables. */
         int width  = ctx->buf->w;
         int height = ctx->buf->h;
@@ -257,9 +260,10 @@ static void* rdr_sw_area_worker(void* arg) {
             }
             recoffset = (recoffset + 1) % ctx->workerc;
         }
-        if (0 != (ret = pthread_mutex_unlock(&ctx->mutex))) {
-            panicf("Can't unlock work mutex in worker. ret: %d", ret);
-        }
+        pthread_mutex_lock(&worker_mutex_done);
+        ctx->done = true;
+        pthread_cond_signal(&worker_cond_done);
+        pthread_mutex_unlock(&worker_mutex_done);
     }
     return NULL;
 }
@@ -273,35 +277,33 @@ static void rdr_sw_update(SDL_Surface* buf, struct fractal_info fi, double t) {
         fi.jx *= ct;
         fi.jy *= st;
     }
-    int ret = 0;
-    /* Dispatch work to workers. */
+    /* Update worker context. */
+    pthread_mutex_lock(&worker_mutex_work);
     for (size_t w = 0; w < workerc; w++) {
-        /* Update worker context. */
-        if (0 != (ret = pthread_mutex_lock(&worker_ctx[w].mutex))) {
-            panicf("Can't lock work mutex in update. ret: %d", ret);
-        }
         worker_ctx[w].buf = buf;
         worker_ctx[w].fi = fi;
-        if (0 != (ret = pthread_mutex_unlock(&worker_ctx[w].mutex))) {
-            panicf("Can't unlock work mutex in update. ret: %d", ret);
-        }
-        /* Signal execution to worker. */
-        pthread_cond_signal(&worker_ctx[w].cond);
+        worker_ctx[w].done = false;
     }
-    struct timespec req;
-    req.tv_sec = 0;
-    req.tv_nsec = 1000;
-    struct timespec rem;
-    nanosleep(&req, &rem);
+    /* Signal execution to worker. */
+    pthread_cond_broadcast(&worker_cond_work);
+    pthread_mutex_unlock(&worker_mutex_work);
+    /* Timeout */
+    struct timespec abstime;
+    abstime.tv_sec  = 0;
+    abstime.tv_nsec = 10000;
     /* Wait for all workers to finish. */
-    for (size_t w = 0; w < workerc; w++) {
-        if (0 != (ret = pthread_mutex_lock(&worker_ctx[w].mutex))) {
-            panicf("Can't lock finish mutex in update. ret: %d", ret);
+    while (true) {
+        pthread_mutex_lock(&worker_mutex_done);
+        pthread_cond_timedwait(&worker_cond_done, &worker_mutex_done, &abstime);
+        bool done = true;
+        for (size_t w = 0; w < workerc; w++) {
+            done &= worker_ctx[w].done;
         }
-        /* Worker w has finished. */
-        if (0 != (ret = pthread_mutex_unlock(&worker_ctx[w].mutex))) {
-            panicf("Can't unlock finish mutex in update. ret: %d", ret);
+        if (done) {
+            pthread_mutex_unlock(&worker_mutex_done);
+            break;
         }
+        pthread_mutex_unlock(&worker_mutex_done);
     }
 }
 

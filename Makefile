@@ -13,8 +13,8 @@ CC=gcc
 SHELL:=/bin/bash
 # DEBUG?=-ggdb3 -O0
 DEBUG?=-O2
-CFLAGS:=-Wall -Wno-unused-function -std=gnu11 $(DEBUG)
-LDFLAGS:=-Wall -zmuldefs
+CFLAGS:=-Wall -Wno-unused-function -std=gnu11 -pthread $(DEBUG)
+LDFLAGS:=-Wall -zmuldefs -pthread
 LDLIBS:=-lpopt -lSDL2 -lGL -lGLEW -lm -lpthread
 VGFLAGS?=\
 	--quiet --leak-check=full --show-leak-kinds=all \
