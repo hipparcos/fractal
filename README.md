@@ -34,9 +34,27 @@ make
 ./fractal
 ```
 
+Multithreaded rendering using pthread is optional.
+You can disable it when building the application:
+```bash
+make MT=0
+```
+
 To print CLI arguments usage:
 ```bash
 ./fractal -?
+```
+
+### Benchmarking
+
+Benchmarks used to show important rendering time differences when short-lived threads were used.
+They are no longer working properly now that long-lived threads are used.
+
+Benchmarks must be built with MT=0 (otherwise they lock).
+Thus, software rendering benchmarks do not show any time difference anymore (as the time needed to render one frame does not depend on the rendering strategy).
+```bash
+make clean
+make benchmark MT=0
 ```
 
 ## Features

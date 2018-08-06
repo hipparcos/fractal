@@ -2,15 +2,18 @@
 
 #include <limits.h>
 #include <math.h>
-#include <pthread.h>
-#include <sys/sysinfo.h>
-#include <time.h>
 #include <SDL2/SDL.h>
 
 #include "panic.h"
 #include "generator/julia.h"
 #include "generator/julia_multiset.h"
 #include "generator/mandelbrot.h"
+
+#ifdef MT
+#include <pthread.h>
+#include <sys/sysinfo.h>
+#include <time.h>
+#endif
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -35,6 +38,7 @@ struct rdr_context {
 };
 
 /* Workers */
+#ifdef MT
 static pthread_t* workers;
 static size_t workerc;
 static struct rdr_context* worker_ctx;
@@ -42,6 +46,7 @@ static pthread_mutex_t worker_mutex_work;
 static pthread_cond_t worker_cond_work;
 static pthread_mutex_t worker_mutex_done;
 static pthread_cond_t worker_cond_done;
+#endif
 
 /** worker takes a rdr_context* and returns NULL. */
 typedef void* (*worker)(void*);
@@ -50,6 +55,7 @@ typedef void* (*worker)(void*);
 static void* rdr_sw_area_worker(void* arg);
 static void* rdr_sw_line_worker(void* arg);
 
+#ifdef MT
 static void rdr_sw_threads_init(worker wk) {
     workerc = (size_t)get_nprocs();
     workers = calloc(workerc, sizeof(pthread_t));
@@ -70,7 +76,9 @@ static void rdr_sw_threads_init(worker wk) {
         }
     }
 }
+#endif
 
+#ifdef MT
 static void rdr_sw_threads_free(void) {
     for (size_t w = 0; w < workerc; w++) {
         pthread_cancel(workers[w]);
@@ -82,6 +90,7 @@ static void rdr_sw_threads_free(void) {
     free(workers);
     free(worker_ctx);
 }
+#endif
 
 void rdr_sw_init(SDL_Window* window) {
     int width, height;
@@ -92,7 +101,9 @@ void rdr_sw_init(SDL_Window* window) {
         panic("Error: SDL can't create a renderer.");
     }
     rdr_sw_resize(width, height);
+#ifdef MT
     rdr_sw_threads_init(rdr_sw_area_worker);
+#endif
 }
 
 void rdr_sw_free(void) {
@@ -105,7 +116,9 @@ void rdr_sw_free(void) {
     if (fractal.buffer) {
         SDL_FreeSurface(fractal.buffer);
     }
+#ifdef LT
     rdr_sw_threads_free();
+#endif
 }
 
 /* renderer interface */
@@ -153,12 +166,14 @@ void rdr_sw_resize(int width, int height) {
 /** rdr_sw_line_worker renders a contiguous set of lines to buffer. */
 static void* rdr_sw_line_worker(void* arg) {
     struct rdr_context* ctx = (struct rdr_context*) arg;
+#ifdef MT
     while (true) {
         /* Wait for work order to be given. */
         pthread_mutex_lock(&worker_mutex_work);
         pthread_cond_wait(&worker_cond_work, &worker_mutex_work);
         ctx->done = false;
         pthread_mutex_unlock(&worker_mutex_work);
+#endif
         /* Proxy variables. */
         int width  = ctx->buf->w;
         int height = ctx->buf->h;
@@ -192,11 +207,13 @@ static void* rdr_sw_line_worker(void* arg) {
                 *(pixels++) = SDL_MapRGB(format, color, color, color);
             }
         }
+#ifdef MT
         pthread_mutex_lock(&worker_mutex_done);
         ctx->done = true;
         pthread_cond_signal(&worker_cond_done);
         pthread_mutex_unlock(&worker_mutex_done);
     }
+#endif
     return NULL;
 }
 
@@ -210,12 +227,14 @@ static void* rdr_sw_line_worker(void* arg) {
  */
 static void* rdr_sw_area_worker(void* arg) {
     struct rdr_context* ctx = (struct rdr_context*) arg;
+#ifdef MT
     while (true) {
         /* Wait for work order to be given. */
         pthread_mutex_lock(&worker_mutex_work);
         pthread_cond_wait(&worker_cond_work, &worker_mutex_work);
         ctx->done = false;
         pthread_mutex_unlock(&worker_mutex_work);
+#endif
         /* Proxy variables. */
         int width  = ctx->buf->w;
         int height = ctx->buf->h;
@@ -260,15 +279,18 @@ static void* rdr_sw_area_worker(void* arg) {
             }
             recoffset = (recoffset + 1) % ctx->workerc;
         }
+#ifdef MT
         pthread_mutex_lock(&worker_mutex_done);
         ctx->done = true;
         pthread_cond_signal(&worker_cond_done);
         pthread_mutex_unlock(&worker_mutex_done);
     }
+#endif
     return NULL;
 }
 
-static void rdr_sw_update(SDL_Surface* buf, struct fractal_info fi, double t) {
+#ifdef MT
+static void rdr_sw_update_mt(SDL_Surface* buf, struct fractal_info fi, double t) {
     /* Set constant for dynamic fractals. */
     if (fi.dynamic) {
         double tp = t / (2 * M_PI_2);
@@ -306,11 +328,35 @@ static void rdr_sw_update(SDL_Surface* buf, struct fractal_info fi, double t) {
         pthread_mutex_unlock(&worker_mutex_done);
     }
 }
+#endif
+
+static void rdr_sw_update(SDL_Surface* buf, struct fractal_info fi, double t, worker wk) {
+    /* Set constant for dynamic fractals. */
+    if (fi.dynamic) {
+        double tp = t / (2 * M_PI_2);
+        double ct = cos(tp);
+        double st = sin(tp);
+        fi.jx *= ct;
+        fi.jy *= st;
+    }
+    /* Update worker context. */
+    struct rdr_context ctx= {0};
+    ctx.buf = buf;
+    ctx.fi = fi;
+    ctx.workeri = 0;
+    ctx.workerc = 1;
+    /* Launch worker. */
+    wk(&ctx);
+}
 
 void rdr_sw_render(struct fractal_info fi, double t, double dt) {
     (void)dt;
     /* Update main memory buffer. */
-    rdr_sw_update(fractal.buffer, fi, t);
+#ifdef MT
+    rdr_sw_update_mt(fractal.buffer, fi, t);
+#else
+    rdr_sw_update(fractal.buffer, fi, t, rdr_sw_area_worker);
+#endif
     /* Update GPU memory texture. */
     uint32_t* pixels; int pitch;
     SDL_LockTexture(fractal.texture, NULL, (void**)&pixels, &pitch);

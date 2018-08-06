@@ -13,13 +13,22 @@ CC=gcc
 SHELL:=/bin/bash
 # DEBUG?=-ggdb3 -O0
 DEBUG?=-O2
-CFLAGS:=-Wall -Wno-unused-function -std=gnu11 -pthread $(DEBUG)
-LDFLAGS:=-Wall -zmuldefs -pthread
-LDLIBS:=-lpopt -lSDL2 -lGL -lGLEW -lm -lpthread
+CFLAGS=-Wall -Wno-unused-function -std=gnu11 $(MTFLAGS) $(DEBUG)
+LDFLAGS=-Wall -zmuldefs $(MTFLAGS)
+LDLIBS=-lpopt -lSDL2 -lGL -lGLEW -lm $(MTLIBS)
 VGFLAGS?=\
 	--quiet --leak-check=full --show-leak-kinds=all \
 	--track-origins=yes --error-exitcode=1 --error-limit=no \
 	--suppressions=./valgrind-libraryleaks.supp
+
+MT?=1
+ifeq (1,$(MT))
+MTFLAGS:=-DMT -pthread
+MTLIBS:=-lpthread
+else
+MTFLAGS:=
+MTLIBS:=
+endif
 
 # Use second expansion to create $(build_dir) on demand.
 .SECONDEXPANSION:

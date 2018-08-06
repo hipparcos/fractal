@@ -38,14 +38,10 @@ void _benchmark_worker(worker wk, int runs, int width, int height) {
         .dpp       = 0.0035,
     };
 
-    rdr_sw_threads_init(wk);
-
     /* Benchmark */
     for (int i = 0; i < runs; i++) {
-        rdr_sw_update(buffer, fi, 0.0);
+        rdr_sw_update(buffer, fi, 0.0, wk);
     }
-
-    rdr_sw_threads_free();
 
     /* Cleanup */
     SDL_FreeSurface(buffer);
