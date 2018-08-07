@@ -42,8 +42,8 @@ struct rdr_context {
 static pthread_t* workers;
 static size_t workerc;
 static struct rdr_context* worker_ctx;
-static pthread_mutex_t worker_mutex_work;
-static pthread_cond_t worker_cond_work;
+static pthread_mutex_t* worker_mutex_work;
+static pthread_cond_t* worker_cond_work;
 static pthread_mutex_t worker_mutex_done;
 static pthread_cond_t worker_cond_done;
 #endif
@@ -59,9 +59,9 @@ static void* rdr_sw_line_worker(void* arg);
 static void rdr_sw_threads_init(worker wk) {
     workerc = (size_t)get_nprocs();
     workers = calloc(workerc, sizeof(pthread_t));
+    worker_mutex_work = calloc(workerc, sizeof(pthread_mutex_t));
+    worker_cond_work = calloc(workerc, sizeof(pthread_cond_t));
     worker_ctx = calloc(workerc, sizeof(struct rdr_context));
-    pthread_mutex_init(&worker_mutex_work, NULL);
-    pthread_cond_init(&worker_cond_work, NULL);
     pthread_mutex_init(&worker_mutex_done, NULL);
     pthread_cond_init(&worker_cond_done, NULL);
     for (size_t w = 0; w < workerc; w++) {
@@ -71,6 +71,8 @@ static void rdr_sw_threads_init(worker wk) {
         worker_ctx[w].workerc = workerc;
         worker_ctx[w].done = false;
         /* Launch worker */
+        pthread_mutex_init(&worker_mutex_work[w], NULL);
+        pthread_cond_init(&worker_cond_work[w], NULL);
         if (0 != (pthread_create(&workers[w], NULL, wk, &worker_ctx[w]))) {
             panic("Error while launching thread.");
         }
@@ -82,9 +84,9 @@ static void rdr_sw_threads_init(worker wk) {
 static void rdr_sw_threads_free(void) {
     for (size_t w = 0; w < workerc; w++) {
         pthread_cancel(workers[w]);
+        pthread_mutex_destroy(&worker_mutex_work[w]);
+        pthread_cond_destroy(&worker_cond_work[w]);
     }
-    pthread_mutex_destroy(&worker_mutex_work);
-    pthread_cond_destroy(&worker_cond_work);
     pthread_mutex_destroy(&worker_mutex_done);
     pthread_cond_destroy(&worker_cond_done);
     free(workers);
@@ -167,12 +169,13 @@ void rdr_sw_resize(int width, int height) {
 static void* rdr_sw_line_worker(void* arg) {
     struct rdr_context* ctx = (struct rdr_context*) arg;
 #ifdef MT
+    int w = ctx->workeri;
     while (true) {
         /* Wait for work order to be given. */
-        pthread_mutex_lock(&worker_mutex_work);
-        pthread_cond_wait(&worker_cond_work, &worker_mutex_work);
+        pthread_mutex_lock(&worker_mutex_work[w]);
+        pthread_cond_wait(&worker_cond_work[w], &worker_mutex_work[w]);
         ctx->done = false;
-        pthread_mutex_unlock(&worker_mutex_work);
+        pthread_mutex_unlock(&worker_mutex_work[w]);
 #endif
         /* Proxy variables. */
         int width  = ctx->buf->w;
@@ -228,12 +231,13 @@ static void* rdr_sw_line_worker(void* arg) {
 static void* rdr_sw_area_worker(void* arg) {
     struct rdr_context* ctx = (struct rdr_context*) arg;
 #ifdef MT
+    int w = ctx->workeri;
     while (true) {
         /* Wait for work order to be given. */
-        pthread_mutex_lock(&worker_mutex_work);
-        pthread_cond_wait(&worker_cond_work, &worker_mutex_work);
+        pthread_mutex_lock(&worker_mutex_work[w]);
+        pthread_cond_wait(&worker_cond_work[w], &worker_mutex_work[w]);
         ctx->done = false;
-        pthread_mutex_unlock(&worker_mutex_work);
+        pthread_mutex_unlock(&worker_mutex_work[w]);
 #endif
         /* Proxy variables. */
         int width  = ctx->buf->w;
@@ -300,15 +304,15 @@ static void rdr_sw_update_mt(SDL_Surface* buf, struct fractal_info fi, double t)
         fi.jy *= st;
     }
     /* Update worker context. */
-    pthread_mutex_lock(&worker_mutex_work);
     for (size_t w = 0; w < workerc; w++) {
+        pthread_mutex_lock(&worker_mutex_work[w]);
         worker_ctx[w].buf = buf;
         worker_ctx[w].fi = fi;
         worker_ctx[w].done = false;
+        /* Signal execution to worker. */
+        pthread_cond_signal(&worker_cond_work[w]);
+        pthread_mutex_unlock(&worker_mutex_work[w]);
     }
-    /* Signal execution to worker. */
-    pthread_cond_broadcast(&worker_cond_work);
-    pthread_mutex_unlock(&worker_mutex_work);
     /* Timeout */
     struct timespec abstime;
     abstime.tv_sec  = 0;
@@ -320,6 +324,12 @@ static void rdr_sw_update_mt(SDL_Surface* buf, struct fractal_info fi, double t)
         bool done = true;
         for (size_t w = 0; w < workerc; w++) {
             done &= worker_ctx[w].done;
+            /* Try to delock thread. */
+            if (!worker_ctx[w].done) {
+                pthread_mutex_lock(&worker_mutex_work[w]);
+                pthread_cond_signal(&worker_cond_work[w]);
+                pthread_mutex_unlock(&worker_mutex_work[w]);
+            }
         }
         if (done) {
             pthread_mutex_unlock(&worker_mutex_done);

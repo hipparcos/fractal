@@ -38,10 +38,22 @@ void _benchmark_worker(worker wk, int runs, int width, int height) {
         .dpp       = 0.0035,
     };
 
+#ifdef MT
+    rdr_sw_threads_init(wk);
+#endif
+
     /* Benchmark */
     for (int i = 0; i < runs; i++) {
+#ifdef MT
+        rdr_sw_update_mt(buffer, fi, 0.0);
+#else
         rdr_sw_update(buffer, fi, 0.0, wk);
+#endif
     }
+
+#ifdef MT
+    rdr_sw_threads_free();
+#endif
 
     /* Cleanup */
     SDL_FreeSurface(buffer);
