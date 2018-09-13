@@ -37,22 +37,33 @@ static GLuint vao, vbuffer, vs, fs, program;
 
 /** read_file reads all content of filename at once.
  ** Caller is responsible for calling free on returned string. */
-static char* read_file(const char* const restrict filename) {
-    char* buffer = 0;
-    long length;
-    FILE* f = fopen(filename, "rb");
-    if (f) {
-        fseek(f, 0, SEEK_END);
-        length = ftell (f);
-        fseek(f, 0, SEEK_SET);
-        buffer = malloc(length);
-        if (buffer) {
-            fread(buffer, 1, length, f);
-        }
-        fclose(f);
-    } else {
-        panicf("Error: can't read file `%s`.", filename);
+static char* read_file(const char* filename) {
+    if (!filename) {
+        return NULL;
     }
+    FILE* file = fopen(filename, "r");
+    if (!file) {
+        panicf("Can't open `%s`.", filename);
+    }
+    fseek(file, 0L, SEEK_END);
+    long length = ftell(file);
+    if (length < 0) {
+        fclose(file);
+        panicf("Can't get size of `%s`.", filename);
+    }
+    fseek(file, 0L, SEEK_SET);
+    char* buffer = malloc(length+1);
+    if (!buffer) {
+        fclose(file);
+        panicf("Can't allocate buffer for `%s`.", filename);
+    }
+    if (fread(buffer, 1, length, file) < 0) {
+        free(buffer);
+        fclose(file);
+        panicf("Can't read `%s`.", filename);
+    }
+    buffer[length] = '\0';
+    fclose(file);
     return buffer;
 }
 
